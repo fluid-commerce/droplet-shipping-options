@@ -1,0 +1,31 @@
+express_shipping:
+  name: "Express Shipping"
+  delivery_time: 2
+  starting_rate: 15.99
+  countries: ["US", "CA"]
+  status: "active"
+  company: acme
+
+standard_shipping:
+  name: "Standard Shipping"
+  delivery_time: 5
+  starting_rate: 8.99
+  countries: ["US", "CA", "MX"]
+  status: "active"
+  company: acme
+
+economy_shipping:
+  name: "Economy Shipping"
+  delivery_time: 7
+  starting_rate: 4.99
+  countries: ["US"]
+  status: "inactive"
+  company: acme
+
+draft_shipping:
+  name: "Premium Shipping"
+  delivery_time: 1
+  starting_rate: 25.99
+  countries: ["US", "CA", "MX", "BR"]
+  status: "draft"
+  company: acme

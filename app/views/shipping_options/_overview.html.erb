@@ -1,0 +1,82 @@
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8">
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Shipping Overview</h2>
+      <p class="text-gray-600">Monitor your shipping configuration and performance</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+          <i class="fa-solid fa-shipping-fast text-white"></i>
+        </div>
+        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+      </div>
+      <div class="text-3xl font-bold text-gray-900 mb-1"><%= @shipping_options.count %></div>
+      <div class="text-sm text-gray-600 font-medium">Active Methods</div>
+    </div>
+
+    <div class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-2xl p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
+          <i class="fa-solid fa-globe text-white"></i>
+        </div>
+        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+      </div>
+      <div class="text-3xl font-bold text-gray-900 mb-1"><%= @total_regions %></div>
+      <div class="text-sm text-gray-600 font-medium">Configured Regions</div>
+    </div>
+  </div>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Active Shipping Methods</h2>
+      <p class="text-gray-600">Currently enabled shipping options for your customers</p>
+    </div>
+  </div>
+
+  <% if @shipping_options.any? %>
+    <div class="flex flex-col md:flex-row gap-6">
+      <% @shipping_options.each do |shipping_option| %>
+        <div class="flex-1 bg-white border border-gray-200 rounded-xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-900"><%= shipping_option.name %></h3>
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              <div class="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+              <%= shipping_option.status.capitalize %>
+            </span>
+          </div>
+          <div class="text-sm text-gray-600 mb-4"><%= shipping_option.countries.join(', ') %></div>
+          <div class="space-y-3">
+            <div class="text-center">
+              <div class="text-2xl font-bold text-gray-900"><%= shipping_option.delivery_time %></div>
+              <div class="text-sm text-gray-600"><%= pluralize(shipping_option.delivery_time, 'day') %></div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-gray-900">$<%= number_with_precision(shipping_option.starting_rate, precision: 2) %>+</div>
+              <div class="text-sm text-gray-600">Starting Rate</div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="text-center py-12">
+      <div class="mx-auto h-12 w-12 text-gray-400">
+        <i class="fa-solid fa-box text-4xl"></i>
+      </div>
+      <h3 class="mt-2 text-sm font-medium text-gray-900">No active shipping methods</h3>
+      <p class="mt-1 text-sm text-gray-500">Get started by creating your first shipping method.</p>
+      <div class="mt-6">
+        <button class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md !text-white !bg-blue-600 hover:!bg-blue-500 transition-colors duration-200">
+          <i class="fa-solid fa-plus mr-2"></i>
+          Add Method
+        </button>
+      </div>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,105 @@
+<div id="addMethodModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50" data-turbo-permanent>
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Add New Shipping Method</h3>
+        <button id="closeModal" class="text-gray-400 hover:text-gray-600">
+          <i class="fa-solid fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <%= form_with model: @new_shipping_option, local: true, class: "space-y-4" do |form| %>
+        <div>
+          <%= form.label :name, "Method Name", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= form.text_field :name, class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", placeholder: "e.g., Express Shipping" %>
+        </div>
+
+        <div>
+          <%= form.label :delivery_time, "Delivery Time (days)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= form.number_field :delivery_time, min: 1, class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", placeholder: "e.g., 2" %>
+        </div>
+
+        <div>
+          <%= form.label :starting_rate, "Starting Rate ($)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= form.number_field :starting_rate, min: 0, step: 0.01, class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", placeholder: "e.g., 15.99" %>
+        </div>
+
+        <div>
+          <%= form.label :countries, "Countries", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= form.text_field :countries, class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", placeholder: "e.g., US, CA, MX" %>
+          <p class="text-xs text-gray-500 mt-1">Enter country codes separated by commas</p>
+        </div>
+
+        <div>
+          <%= form.label :status, "Status", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= form.select :status, options_for_select([['Active', 'active'], ['Inactive', 'inactive'], ['Draft', 'draft']], 'active'), {}, class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" %>
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-4">
+          <button type="button" id="cancelBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">
+            Cancel
+          </button>
+          <%= form.submit "Create Method", class: "px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<div id="editMethodModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50" data-turbo-permanent>
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Edit Shipping Method</h3>
+        <button id="closeEditModal" class="text-gray-400 hover:text-gray-600">
+          <i class="fa-solid fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <form id="editMethodForm" class="space-y-4">
+        <input type="hidden" id="editShippingOptionId" name="id">
+        <input type="hidden" name="_method" value="PATCH">
+        
+        <div>
+          <label for="editName" class="block text-sm font-medium text-gray-700 mb-1">Method Name</label>
+          <input type="text" id="editName" name="shipping_option[name]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., Express Shipping">
+        </div>
+
+        <div>
+          <label for="editDeliveryTime" class="block text-sm font-medium text-gray-700 mb-1">Delivery Time (days)</label>
+          <input type="number" id="editDeliveryTime" name="shipping_option[delivery_time]" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 2">
+        </div>
+
+        <div>
+          <label for="editStartingRate" class="block text-sm font-medium text-gray-700 mb-1">Starting Rate ($)</label>
+          <input type="number" id="editStartingRate" name="shipping_option[starting_rate]" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 15.99">
+        </div>
+
+        <div>
+          <label for="editCountries" class="block text-sm font-medium text-gray-700 mb-1">Countries</label>
+          <input type="text" id="editCountries" name="shipping_option[countries]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., US, CA, MX">
+          <p class="text-xs text-gray-500 mt-1">Enter country codes separated by commas</p>
+        </div>
+
+        <div>
+          <label for="editStatus" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select id="editStatus" name="shipping_option[status]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-4">
+          <button type="button" id="cancelEditBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">
+            Cancel
+          </button>
+          <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md">
+            Update Method
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+

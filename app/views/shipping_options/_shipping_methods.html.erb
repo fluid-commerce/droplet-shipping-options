@@ -1,0 +1,84 @@
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Shipping Methods</h2>
+      <p class="text-gray-600">Manage and configure your shipping methods</p>
+    </div>
+    <button id="addMethodBtn" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+      <i class="fa-solid fa-plus mr-2"></i>
+      Add Method
+    </button>
+  </div>
+
+  <div class="overflow-x-auto">
+    <% if @shipping_options.any? %>
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Time</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Starting Rate</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Regions</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @shipping_options.each do |shipping_option| %>
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900"><%= shipping_option.name %></div>
+                <div class="text-sm text-gray-500"><%= pluralize(shipping_option.delivery_time, 'day') %></div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <%= pluralize(shipping_option.delivery_time, 'day') %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                $<%= number_with_precision(shipping_option.starting_rate, precision: 2) %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <%= shipping_option.countries&.join(', ') %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <%= shipping_option.status&.capitalize %>
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button class="edit-method-btn text-blue-600 hover:text-blue-900 mr-3" 
+                        data-shipping-option-id="<%= shipping_option.id %>"
+                        data-shipping-option-name="<%= shipping_option.name %>"
+                        data-shipping-option-delivery-time="<%= shipping_option.delivery_time %>"
+                        data-shipping-option-starting-rate="<%= shipping_option.starting_rate %>"
+                        data-shipping-option-countries="<%= shipping_option.countries&.join(', ') %>"
+                        data-shipping-option-status="<%= shipping_option.status %>">
+                  Edit
+                </button>
+                <button class="disable-method-btn text-red-600 hover:text-red-900" 
+                        data-shipping-option-id="<%= shipping_option.id %>"
+                        data-shipping-option-name="<%= shipping_option.name %>">
+                  Disable
+                </button>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <div class="text-center py-12">
+        <div class="mx-auto h-12 w-12 text-gray-400">
+          <i class="fa-solid fa-box text-4xl"></i>
+        </div>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No shipping methods</h3>
+        <p class="mt-1 text-sm text-gray-500">Get started by creating a new shipping method.</p>
+        <div class="mt-6">
+          <button id="addMethodBtnEmpty" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+            <i class="fa-solid fa-plus mr-2"></i>
+            Add Method
+          </button>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+

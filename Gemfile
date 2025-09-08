@@ -10,6 +10,7 @@ gem "devise", "~> 4.9"
 gem "httparty", "~> 0.23.1"
 gem "jbuilder"
 gem "json_schemer", "~> 2.4"
+gem "active_model_serializers"
 gem "kamal", require: false
 gem "minitest-rails", "~> 8.0.0"
 gem "pg", "~> 1.1"
@@ -20,6 +21,7 @@ gem "solid_cable"
 gem "solid_cache"
 gem "solid_queue"
 gem "thruster", require: false
+gem "turbo-rails"
 gem "vite_rails", "~> 3.0", ">= 3.0.19"
 
 group :development, :test do

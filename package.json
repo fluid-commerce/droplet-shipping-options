@@ -25,6 +25,7 @@
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-regular-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@hotwired/turbo-rails": "^8.0.16",
     "@radix-ui/react-slot": "^1.1.2",
     "@rjsf/core": "^5.24.8",
     "@rjsf/utils": "^5.24.8",

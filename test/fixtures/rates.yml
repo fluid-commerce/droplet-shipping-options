@@ -1,0 +1,51 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  shipping_option: standard_shipping
+  ship_method_id: 1
+  country: "US"
+  region: "CA"
+  min_range_lbs: 0.1
+  max_range_lbs: 5.0
+  flat_rate: 20.00
+  min_charge: 10.00
+
+two:
+  shipping_option: standard_shipping
+  ship_method_id: 2
+  country: "US"
+  region: "NY"
+  min_range_lbs: 0.1
+  max_range_lbs: 3.0
+  flat_rate: 35.00
+  min_charge: 25.00
+
+three:
+  shipping_option: express_shipping
+  ship_method_id: 1
+  country: "CA"
+  region: "ON"
+  min_range_lbs: 0.1
+  max_range_lbs: 10.0
+  flat_rate: 25.00
+  min_charge: 15.00
+
+four:
+  shipping_option: standard_shipping
+  ship_method_id: 3
+  country: "US"
+  region: "TX"
+  min_range_lbs: 0.1
+  max_range_lbs: 2.0
+  flat_rate: 50.00
+  min_charge: 40.00
+
+five:
+  shipping_option: express_shipping
+  ship_method_id: 2
+  country: "CA"
+  region: "BC"
+  min_range_lbs: 0.1
+  max_range_lbs: 5.0
+  flat_rate: 30.00
+  min_charge: 20.00

@@ -1,0 +1,78 @@
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 mb-8">
+  <nav class="flex space-x-1" id="shipping-nav-tabs">
+    <% 
+      is_overview = controller_name == 'shipping_options' && action_name == 'index'
+      is_shipping_methods = controller_name == 'shipping_options' && action_name == 'shipping_methods'
+      is_rate_tables = controller_name == 'rates' && action_name == 'index' && !params[:shipping_option_id]
+    %>
+    
+    <%= link_to shipping_options_path, 
+        data: { turbo_frame: "shipping_content" },
+        class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-blue-50 text-blue-700 border border-blue-200' if is_overview} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_overview}",
+        data: { turbo_frame: "shipping_content", tab: "overview" } do %>
+      <i class="fa-solid fa-grid-3 mr-2"></i>
+      Overview
+    <% end %>
+    
+    <%= link_to shipping_methods_shipping_options_path, 
+        data: { turbo_frame: "shipping_content" },
+        class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-blue-50 text-blue-700 border border-blue-200' if is_shipping_methods} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_shipping_methods}",
+        data: { turbo_frame: "shipping_content", tab: "shipping_methods" } do %>
+      <i class="fa-solid fa-list mr-2"></i>
+      Shipping Methods
+    <% end %>
+    
+    <%= link_to rate_tables_path, 
+        data: { turbo_frame: "shipping_content" },
+        class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-blue-50 text-blue-700 border border-blue-200' if is_rate_tables} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_rate_tables}",
+        data: { turbo_frame: "shipping_content", tab: "rate_tables" } do %>
+      <i class="fa-solid fa-arrows-up-down mr-2"></i>
+      Rate Tables
+    <% end %>
+  </nav>
+</div>
+
+<script>
+// Handle tab navigation and active states
+document.addEventListener('DOMContentLoaded', function() {
+  // Function to update active tab
+  function updateActiveTab(activeTab) {
+    // Remove active class from all tabs
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.classList.remove('bg-blue-50', 'text-blue-700', 'border', 'border-blue-200');
+      tab.classList.add('text-gray-600', 'hover:text-gray-900', 'hover:bg-gray-50');
+    });
+    
+    // Add active class to the clicked tab
+    const activeTabElement = document.querySelector(`[data-tab="${activeTab}"]`);
+    if (activeTabElement) {
+      activeTabElement.classList.remove('text-gray-600', 'hover:text-gray-900', 'hover:bg-gray-50');
+      activeTabElement.classList.add('bg-blue-50', 'text-blue-700', 'border', 'border-blue-200');
+    }
+  }
+  
+  // Add click listeners to tabs
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.addEventListener('click', function(e) {
+      const tabName = this.getAttribute('data-tab');
+      updateActiveTab(tabName);
+    });
+  });
+  
+  // Listen for turbo frame loads to update active state
+  document.addEventListener('turbo:frame-load', function(e) {
+    if (e.target.id === 'shipping_content') {
+      // Determine which tab should be active based on the loaded content
+      const frameContent = e.target.innerHTML;
+      
+      if (frameContent.includes('Shipping Methods') && frameContent.includes('Add Method')) {
+        updateActiveTab('shipping_methods');
+      } else if (frameContent.includes('Rate Tables') && frameContent.includes('Add Rate Table')) {
+        updateActiveTab('rate_tables');
+      } else if (frameContent.includes('Extended Shipping Options') && frameContent.includes('Overview')) {
+        updateActiveTab('overview');
+      }
+    }
+  });
+});
+</script>
