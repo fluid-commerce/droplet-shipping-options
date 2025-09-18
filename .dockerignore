@@ -49,6 +49,17 @@
 # Ignore Docker-related files
 /.dockerignore
 /Dockerfile*
+/docker
 
 # don't ignore environment files
 !.env.local
+
+# Ignore terraform files
+/terraform
+/terraform.lock.hcl
+
+# Ignore makefile
+makefile
+
+# Ignore cloudbuild files
+cloudbuild-production.yml
