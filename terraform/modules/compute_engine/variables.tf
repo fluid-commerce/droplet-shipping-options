@@ -48,12 +48,6 @@ variable "static_ip_address" {
   default     = ""
 }
 
-variable "startup_script" {
-  description = "Startup script of the Compute Engine instance"
-  type        = string
-  default     = " #! /bin/bash\n docker images \"us-west3-docker.pkg.dev/fluid-417204/fluid-droplets/fluid-droplet-avalara-rails/web\" --format \"{{.ID}}\" | tail -n +2 | xargs -r docker rmi -f"
-}
-
 variable "email_service_account" {
   description = "Email of the service account"
   type        = string
@@ -64,7 +58,7 @@ variable "email_service_account" {
 variable "container_image" {
   description = "Image of the container"
   type        = string
-  default     = "us-west3-docker.pkg.dev/fluid-417204/fluid-droplets/fluid-droplet-avalara-rails/web:latest"
+  default     = ""
 }
 
 variable "container_rails_master_key" {
