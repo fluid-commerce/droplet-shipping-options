@@ -5,7 +5,8 @@ steps:
     args:
       [
         "build",
-        "--no-cache",
+        "--cache-from=europe-west1-docker.pkg.dev/${PROJECT_ID}/${_APP_REPOSITORY}/${_APP_NAME}-base/web:latest",
+        "--cache-from=europe-west1-docker.pkg.dev/${PROJECT_ID}/${_APP_REPOSITORY}/${_APP_NAME}-rails/web:latest",
         "-t",
         "europe-west1-docker.pkg.dev/${PROJECT_ID}/${_APP_REPOSITORY}/${_APP_NAME}-rails/web:$COMMIT_SHA",
         "-t",
@@ -22,7 +23,7 @@ steps:
         "push",
         "europe-west1-docker.pkg.dev/${PROJECT_ID}/${_APP_REPOSITORY}/${_APP_NAME}-rails/web:$COMMIT_SHA",
       ]
-    id: push commit sha
+    id: push-commit-sha
 
   - name: gcr.io/cloud-builders/docker
     args:
@@ -30,7 +31,7 @@ steps:
         "push",
         "europe-west1-docker.pkg.dev/${PROJECT_ID}/${_APP_REPOSITORY}/${_APP_NAME}-rails/web:latest",
       ]
-    id: push latest
+    id: push-latest
 
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     args:
@@ -44,7 +45,7 @@ steps:
         "--execute-now",
         "--wait",
       ]
-    id: Migrate
+    id: migrate
     entrypoint: gcloud
 
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
@@ -59,8 +60,9 @@ steps:
         "--region=europe-west1",
         "--revision-suffix=${COMMIT_SHA}-${_TIMESTAMP}",
       ]
-    id: Deploy Production
+    id: deploy-production
     entrypoint: gcloud
+    waitFor: ["migrate"]
 
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     args:
@@ -73,8 +75,9 @@ steps:
         "--container-image=europe-west1-docker.pkg.dev/${PROJECT_ID}/${_APP_REPOSITORY}/${_APP_NAME}-rails/web:$COMMIT_SHA",
         "--quiet",
       ]
-    id: Update Container Jobs Production
+    id: update-container-jobs-production
     entrypoint: gcloud
+    waitFor: ["migrate"]
 
 substitutions:
   _APP_NAME: "fluid-droplet-shipping-options"
@@ -87,4 +90,4 @@ images:
 options:
   substitutionOption: ALLOW_LOOSE
   logging: CLOUD_LOGGING_ONLY
-  machineType: E2_HIGHCPU_8
+  machineType: E2_STANDARD_2
