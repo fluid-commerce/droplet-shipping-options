@@ -8,16 +8,33 @@ class ShippingOption < ApplicationRecord
   validates :countries, presence: true
   validates :status, presence: true, inclusion: { in: %w[active inactive draft] }
 
-  scope :active, -> { where(status: 'active') }
+  scope :active, -> { where(status: "active") }
+  scope :inactive, -> { where(status: "inactive") }
+  scope :for_country, ->(country_code) { where("countries @> ?", [ country_code ].to_json) }
 
   def active?
-    status == 'active'
+    status == "active"
   end
 
+  def inactive?
+    status == "inactive"
+  end
+
+  def disable!
+    update!(status: "inactive")
+  end
+
+  def enable!
+    update!(status: "active")
+  end
+
+  def toggle_status!
+    active? ? disable! : enable!
+  end
 
   def countries=(value)
     if value.is_a?(String)
-      super(value.split(',').map(&:strip).reject(&:blank?))
+      super(value.split(",").map(&:strip).reject(&:blank?))
     else
       super(value)
     end

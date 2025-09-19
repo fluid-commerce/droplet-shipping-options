@@ -20,88 +20,19 @@
       </div>
       <% if @shipping_options.any? %>
         <button id="addRateBtn" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 !text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
-          <i class="fa-solid fa-plus mr-2"></i>
           Add Rate Table
         </button>
       <% end %>
     </div>
   <% end %>
 
-  <% if @shipping_option %>
-    <% if @rates.any? %>
-    <div class="overflow-x-auto">
-      <table class="min-w-full bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ship Method ID</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight Range (lbs)</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flat Rate</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Min Charge</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <% @rates.each do |rate| %>
-            <tr class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                <%= rate.ship_method_id %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                <%= rate.country %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                <%= rate.region.present? ? rate.region : "-" %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                <%= rate.weight_range %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                $<%= number_with_precision(rate.flat_rate, precision: 2) %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                $<%= number_with_precision(rate.min_charge, precision: 2) %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <div class="flex space-x-2">
-                  <%= link_to edit_shipping_option_rate_path(@shipping_option, rate), class: "text-blue-600 hover:text-blue-900 text-xs" do %>
-                    Edit
-                  <% end %>
-                  <%= link_to shipping_option_rate_path(@shipping_option, rate), method: :delete,
-                      data: { confirm: 'Are you sure?' }, class: "text-red-600 hover:text-red-900 text-xs" do %>
-                    Delete
-                  <% end %>
-                </div>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-    <% else %>
-      <div class="text-center py-12">
-        <div class="mx-auto h-12 w-12 text-gray-400">
-          <i class="fa-solid fa-table text-4xl"></i>
-        </div>
-        <h3 class="mt-2 text-sm font-medium text-gray-900">No rate tables configured</h3>
-        <p class="mt-1 text-sm text-gray-500">Add rate tables to configure pricing for this shipping method.</p>
-        <div class="mt-6">
-          <%= link_to new_shipping_option_rate_path(@shipping_option), class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md !text-white !bg-blue-600 hover:!bg-blue-500 transition-colors duration-200" do %>
-            <i class="fa-solid fa-plus mr-2"></i>
-            Add Rate Table
-          <% end %>
-        </div>
-      </div>
-    <% end %>
-  <% else %>
+  <% unless @shipping_option %>
     <div class="overflow-x-auto">
       <% if @shipping_options.any? && @shipping_options.joins(:rates).any? %>
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shipping Method</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method ID</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight Range</th>
@@ -126,9 +57,6 @@
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <%= rate.ship_method_id %>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <%= rate.country %>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -144,15 +72,27 @@
                     $<%= number_with_precision(rate.min_charge, precision: 2) %>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div class="flex space-x-2">
-                      <%= link_to edit_shipping_option_rate_path(shipping_option, rate), class: "text-blue-600 hover:text-blue-900" do %>
-                        Edit
-                      <% end %>
-                      <%= link_to shipping_option_rate_path(shipping_option, rate), method: :delete,
-                          data: { confirm: 'Are you sure?' }, class: "text-red-600 hover:text-red-900" do %>
-                        Delete
-                      <% end %>
-                    </div>
+                    <button class="edit-rate-btn text-blue-600 hover:text-blue-900 mr-3" 
+                            data-rate-id="<%= rate.id %>"
+                            data-rate-country="<%= rate.country %>"
+                            data-rate-region="<%= rate.region %>"
+                            data-rate-min-weight="<%= rate.min_range_lbs %>"
+                            data-rate-max-weight="<%= rate.max_range_lbs %>"
+                            data-rate-flat-rate="<%= rate.flat_rate %>"
+                            data-rate-min-charge="<%= rate.min_charge %>"
+                            data-shipping-option-id="<%= rate.shipping_option_id %>"
+                            data-shipping-option-name="<%= rate.shipping_option.name %>">
+                      Edit
+                    </button>
+                    <button class="delete-rate-btn text-red-600 hover:text-red-900" 
+                            style: "color: #dc2626 !important;"
+                            data-rate-id="<%= rate.id %>"
+                            data-rate-country="<%= rate.country %>"
+                            data-rate-region="<%= rate.region %>"
+                            data-shipping-option-name="<%= rate.shipping_option.name %>"
+                            data-delete-url="<%= rate_table_path(rate) %>">
+                      Delete
+                    </button>
                   </td>
                 </tr>
               <% end %>
@@ -169,12 +109,10 @@
           <div class="mt-6">
             <% if @shipping_options.any? %>
               <button id="addRateBtnEmpty" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md !text-white !bg-blue-600 hover:!bg-blue-700 transition-colors duration-200">
-                <i class="fa-solid fa-plus mr-2"></i>
                 Add Rate Table
               </button>
             <% else %>
               <%= link_to shipping_methods_shipping_options_path, class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-violet-600 hover:bg-violet-700 transition-colors duration-200" do %>
-                <i class="fa-solid fa-plus mr-2"></i>
                 Create Shipping Method
               <% end %>
             <% end %>
@@ -248,3 +186,329 @@
     </div>
   </div>
 </div>
+
+<div id="editRateModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50" data-turbo-permanent>
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Edit Rate Table</h3>
+        <button id="closeEditRateModal" class="text-gray-400 hover:text-gray-600">
+          <i class="fa-solid fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <form id="editRateForm" class="space-y-4">
+        <input type="hidden" id="editRateId" name="rate[id]">
+        
+
+        <div>
+          <label for="editRateCountry" class="block text-sm font-medium text-gray-700 mb-1">Country</label>
+          <input type="text" id="editRateCountry" name="rate[country]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., US, CA, MX" maxlength="2" required>
+        </div>
+
+        <div>
+          <label for="editRateRegion" class="block text-sm font-medium text-gray-700 mb-1">Region</label>
+          <input type="text" id="editRateRegion" name="rate[region]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., CA, NY, ON (optional)">
+        </div>
+
+        <div>
+          <label for="editRateMinWeight" class="block text-sm font-medium text-gray-700 mb-1">Minimum Weight (lbs)</label>
+          <input type="number" id="editRateMinWeight" name="rate[min_range_lbs]" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0.1" required>
+        </div>
+
+        <div>
+          <label for="editRateMaxWeight" class="block text-sm font-medium text-gray-700 mb-1">Maximum Weight (lbs)</label>
+          <input type="number" id="editRateMaxWeight" name="rate[max_range_lbs]" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="5.0" required>
+        </div>
+
+        <div>
+          <label for="editRateFlatRate" class="block text-sm font-medium text-gray-700 mb-1">Flat Rate ($)</label>
+          <input type="number" id="editRateFlatRate" name="rate[flat_rate]" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="20.00" required>
+        </div>
+
+        <div>
+          <label for="editRateMinCharge" class="block text-sm font-medium text-gray-700 mb-1">Minimum Charge ($)</label>
+          <input type="number" id="editRateMinCharge" name="rate[min_charge]" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="10.00" required>
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-4">
+          <button type="button" id="cancelEditRateBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">
+            Cancel
+          </button>
+          <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md">
+            Update Rate Table
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function initializeRateTableModals() {
+  const addRateBtn = document.getElementById('addRateBtn');
+  const addRateBtnEmpty = document.getElementById('addRateBtnEmpty');
+  const addRateModal = document.getElementById('addRateModal');
+  const closeRateModal = document.getElementById('closeRateModal');
+  const cancelRateBtn = document.getElementById('cancelRateBtn');
+  const addRateForm = document.getElementById('addRateForm');
+
+  const editRateModal = document.getElementById('editRateModal');
+  const closeEditRateModal = document.getElementById('closeEditRateModal');
+  const cancelEditRateBtn = document.getElementById('cancelEditRateBtn');
+  const editRateForm = document.getElementById('editRateForm');
+
+  function openAddModal() {
+    if (addRateModal) {
+      addRateModal.classList.remove('hidden');
+    }
+  }
+
+  function closeAddModal() {
+    if (addRateModal) {
+      addRateModal.classList.add('hidden');
+      addRateForm.reset();
+    }
+  }
+
+  function openEditModal(rateData) {
+    if (editRateModal) {
+      document.getElementById('editRateId').value = rateData.rateId;
+      document.getElementById('editRateCountry').value = rateData.country;
+      document.getElementById('editRateRegion').value = rateData.region || '';
+      document.getElementById('editRateMinWeight').value = rateData.minWeight;
+      document.getElementById('editRateMaxWeight').value = rateData.maxWeight;
+      document.getElementById('editRateFlatRate').value = rateData.flatRate;
+      document.getElementById('editRateMinCharge').value = rateData.minCharge;
+      
+      editRateModal.classList.remove('hidden');
+    }
+  }
+
+  function closeEditModal() {
+    if (editRateModal) {
+      editRateModal.classList.add('hidden');
+      editRateForm.reset();
+    }
+  }
+
+  if (addRateBtn) {
+    addRateBtn.addEventListener('click', openAddModal);
+  }
+  
+  if (addRateBtnEmpty) {
+    addRateBtnEmpty.addEventListener('click', openAddModal);
+  }
+
+  if (closeRateModal) {
+    closeRateModal.addEventListener('click', closeAddModal);
+  }
+
+  if (cancelRateBtn) {
+    cancelRateBtn.addEventListener('click', closeAddModal);
+  }
+
+  if (closeEditRateModal) {
+    closeEditRateModal.addEventListener('click', closeEditModal);
+  }
+
+  if (cancelEditRateBtn) {
+    cancelEditRateBtn.addEventListener('click', closeEditModal);
+  }
+
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('edit-rate-btn')) {
+      e.preventDefault();
+      
+      const rateData = {
+        rateId: e.target.dataset.rateId,
+        shippingOptionId: e.target.dataset.shippingOptionId,
+        country: e.target.dataset.rateCountry,
+        region: e.target.dataset.rateRegion,
+        minWeight: e.target.dataset.rateMinWeight,
+        maxWeight: e.target.dataset.rateMaxWeight,
+        flatRate: e.target.dataset.rateFlatRate,
+        minCharge: e.target.dataset.rateMinCharge
+      };
+      
+      openEditModal(rateData);
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('delete-rate-btn')) {
+      e.preventDefault();
+
+      const rateId = e.target.dataset.rateId;
+      const country = e.target.dataset.rateCountry;
+      const region = e.target.dataset.rateRegion;
+      const shippingOptionName = e.target.dataset.shippingOptionName;
+      const deleteUrl = e.target.dataset.deleteUrl;
+
+      const regionText = region ? ` (${region})` : '';
+      const confirmMessage = `Are you sure you want to delete this rate table?\n\nShipping Method: ${shippingOptionName}\nCountry: ${country}${regionText}`;
+      
+      if (confirm(confirmMessage)) {
+        deleteRate(deleteUrl);
+      }
+    }
+  });
+
+  if (addRateModal) {
+    addRateModal.addEventListener('click', function(e) {
+      if (e.target === addRateModal) {
+        closeAddModal();
+      }
+    });
+  }
+
+  if (editRateModal) {
+    editRateModal.addEventListener('click', function(e) {
+      if (e.target === editRateModal) {
+        closeEditModal();
+      }
+    });
+  }
+
+
+  if (addRateForm) {
+    addRateForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      // Limpiar errores anteriores
+      clearFormErrors();
+      
+      const formData = new FormData(addRateForm);
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      
+      // Mostrar loading state
+      const submitBtn = addRateForm.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Creating...';
+      submitBtn.disabled = true;
+      
+      fetch('/rates', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRF-Token': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Éxito: cerrar modal y recargar página
+          closeAddModal();
+          window.location.reload();
+        } else {
+          // Error: mostrar errores en el modal
+          showFormErrors(data.errors);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showFormErrors(['An unexpected error occurred. Please try again.']);
+      })
+      .finally(() => {
+        // Restaurar botón
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      });
+    });
+  }
+  
+  function clearFormErrors() {
+    const errorContainer = document.getElementById('addRateErrors');
+    if (errorContainer) {
+      errorContainer.remove();
+    }
+  }
+  
+  function showFormErrors(errors) {
+    clearFormErrors();
+    
+    const errorHtml = `
+      <div id="addRateErrors" class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <i class="fa-solid fa-exclamation-triangle text-red-400"></i>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">
+              ${errors.length} error${errors.length > 1 ? 's' : ''} prohibited this rate from being saved:
+            </h3>
+            <div class="mt-2 text-sm text-red-700">
+              <ul class="list-disc list-inside space-y-1">
+                ${errors.map(error => `<li>${error}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    addRateForm.insertAdjacentHTML('afterbegin', errorHtml);
+  }
+
+  if (editRateForm) {
+    editRateForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(editRateForm);
+      const rateId = formData.get('rate[id]');
+      
+      const updateUrl = `${window.location.origin}/rates/${rateId}`;
+      
+      editRateForm.action = updateUrl;
+      editRateForm.method = 'post';
+      
+      const methodField = document.createElement('input');
+      methodField.type = 'hidden';
+      methodField.name = '_method';
+      methodField.value = 'patch';
+      editRateForm.appendChild(methodField);
+      
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const csrfField = document.createElement('input');
+      csrfField.type = 'hidden';
+      csrfField.name = 'authenticity_token';
+      csrfField.value = csrfToken;
+      editRateForm.appendChild(csrfField);
+      
+      editRateForm.submit();
+    });
+  }
+
+  function deleteRate(deleteUrl) {
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = deleteUrl;
+    
+    const methodField = document.createElement('input');
+    methodField.type = 'hidden';
+    methodField.name = '_method';
+    methodField.value = 'delete';
+    form.appendChild(methodField);
+    
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfField = document.createElement('input');
+    csrfField.type = 'hidden';
+    csrfField.name = 'authenticity_token';
+    csrfField.value = csrfToken;
+    form.appendChild(csrfField);
+    
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeRateTableModals);
+} else {
+  initializeRateTableModals();
+}
+
+document.addEventListener('turbo:load', initializeRateTableModals);
+document.addEventListener('turbo:render', initializeRateTableModals);
+</script>

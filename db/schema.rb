@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_08_134028) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_10_005215) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -72,7 +72,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_08_134028) do
 
   create_table "rates", force: :cascade do |t|
     t.bigint "shipping_option_id", null: false
-    t.integer "ship_method_id", null: false
     t.string "country", null: false
     t.string "region"
     t.decimal "min_range_lbs", precision: 8, scale: 2, null: false
@@ -82,7 +81,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_08_134028) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["country", "region"], name: "index_rates_on_country_and_region"
-    t.index ["shipping_option_id", "ship_method_id", "country", "region"], name: "index_rates_on_shipping_option_and_method_and_location"
+    t.index ["shipping_option_id", "country", "region"], name: "index_rates_on_shipping_option_and_location"
     t.index ["shipping_option_id"], name: "index_rates_on_shipping_option_id"
   end
 
