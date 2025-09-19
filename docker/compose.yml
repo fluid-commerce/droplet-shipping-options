@@ -20,7 +20,7 @@ services:
       - 3036:3036
     volumes:
       - ../:/rails
-      - gems:/usr/local/bundle/gems
+      - gems:/usr/local/bundle
       - node_modules:/rails/node_modules
     depends_on:
       - db

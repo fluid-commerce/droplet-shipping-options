@@ -18,14 +18,14 @@ resource "google_compute_instance" "compute_instance" {
   }
 
   network_interface {
-    network    = "default"
-    subnetwork = "fluid-compute-workers-subnet"
+    network    = "fluid-egress-vpc"
+    subnetwork = "fluid-compute-workers-europe-subnet"
   }
 
   metadata = {
     gce-container-declaration = module.gce-container.metadata_value
     block-project-ssh-keys    = "true"
-    startup-script            = var.startup_script
+    startup-script            = " #! /bin/bash\n docker images \"${var.container_image}\" --format \"{{.ID}}\" | tail -n +2 | xargs -r docker rmi -f"
   }
 
   service_account {
