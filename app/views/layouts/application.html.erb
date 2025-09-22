@@ -12,6 +12,8 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+
     <%= vite_client_tag %>
     <%= vite_stylesheet_tag "application" %>
     <%= vite_typescript_tag "application" %>
@@ -20,5 +22,6 @@
 
   <body>
     <%= yield %>
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
   </body>
 </html>

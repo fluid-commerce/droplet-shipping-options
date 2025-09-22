@@ -8,7 +8,7 @@
         </button>
       </div>
       
-      <%= form_with model: @new_shipping_option, local: true, class: "space-y-4" do |form| %>
+      <%= form_with model: @new_shipping_option, local: false, class: "space-y-4", id: "addMethodForm", data: { remote: true } do |form| %>
         <div>
           <%= form.label :name, "Method Name", class: "block text-sm font-medium text-gray-700 mb-1" %>
           <%= form.text_field :name, class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", placeholder: "e.g., Express Shipping" %>
@@ -26,8 +26,8 @@
 
         <div>
           <%= form.label :countries, "Countries", class: "block text-sm font-medium text-gray-700 mb-1" %>
-          <%= form.text_field :countries, class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", placeholder: "e.g., US, CA, MX" %>
-          <p class="text-xs text-gray-500 mt-1">Enter country codes separated by commas</p>
+          <%= form.select :countries, [], {}, { multiple: true, class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", id: "shippingMethodCountries" } %>
+          <p class="text-xs text-gray-500 mt-1">Select one or more countries</p>
         </div>
 
         <div>
@@ -77,8 +77,9 @@
 
         <div>
           <label for="editCountries" class="block text-sm font-medium text-gray-700 mb-1">Countries</label>
-          <input type="text" id="editCountries" name="shipping_option[countries]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., US, CA, MX">
-          <p class="text-xs text-gray-500 mt-1">Enter country codes separated by commas</p>
+          <select id="editCountries" name="shipping_option[countries]" multiple class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          </select>
+          <p class="text-xs text-gray-500 mt-1">Select one or more countries</p>
         </div>
 
         <div>

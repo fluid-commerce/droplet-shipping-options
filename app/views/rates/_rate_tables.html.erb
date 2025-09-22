@@ -146,12 +146,16 @@
 
         <div>
           <label for="rateCountry" class="block text-sm font-medium text-gray-700 mb-1">Country</label>
-          <input type="text" id="rateCountry" name="rate[country]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., US, CA, MX" maxlength="2" required>
+          <select id="rateCountry" name="rate[country]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+            <option value="">Select a country...</option>
+          </select>
         </div>
 
         <div>
           <label for="rateRegion" class="block text-sm font-medium text-gray-700 mb-1">Region</label>
-          <input type="text" id="rateRegion" name="rate[region]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., CA, NY, ON (optional)">
+          <select id="rateRegion" name="rate[region]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">Select a region...</option>
+          </select>
         </div>
 
         <div>
@@ -203,12 +207,16 @@
 
         <div>
           <label for="editRateCountry" class="block text-sm font-medium text-gray-700 mb-1">Country</label>
-          <input type="text" id="editRateCountry" name="rate[country]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., US, CA, MX" maxlength="2" required>
+          <select id="editRateCountry" name="rate[country]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+            <option value="">Select a country...</option>
+          </select>
         </div>
 
         <div>
           <label for="editRateRegion" class="block text-sm font-medium text-gray-700 mb-1">Region</label>
-          <input type="text" id="editRateRegion" name="rate[region]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., CA, NY, ON (optional)">
+          <select id="editRateRegion" name="rate[region]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">Select a region...</option>
+          </select>
         </div>
 
         <div>
@@ -245,7 +253,23 @@
 </div>
 
 <script>
+let countryChoices, regionChoices, editCountryChoices, editRegionChoices;
+
 function initializeRateTableModals() {
+  initializeChoices();
+  loadCountriesData();
+  setTimeout(() => {
+    if (countryChoices && regionChoices) {
+      console.log('Choices instances are ready');
+      loadRegionsForCountry('US', regionChoices);
+    } else {
+      console.error('Choices instances not ready!');
+    }
+
+    const rateCountryEl = document.getElementById('rateCountry');
+    const rateRegionEl = document.getElementById('rateRegion');
+  }, 2000);
+
   const addRateBtn = document.getElementById('addRateBtn');
   const addRateBtnEmpty = document.getElementById('addRateBtnEmpty');
   const addRateModal = document.getElementById('addRateModal');
@@ -261,6 +285,11 @@ function initializeRateTableModals() {
   function openAddModal() {
     if (addRateModal) {
       addRateModal.classList.remove('hidden');
+
+      setTimeout(() => {
+        const rateCountryEl = document.getElementById('rateCountry');
+        const rateRegionEl = document.getElementById('rateRegion');
+      }, 100);
     }
   }
 
@@ -268,14 +297,27 @@ function initializeRateTableModals() {
     if (addRateModal) {
       addRateModal.classList.add('hidden');
       addRateForm.reset();
+      try {
+        if (countryChoices) countryChoices.setChoiceByValue('');
+        if (regionChoices) regionChoices.setChoiceByValue('');
+      } catch (e) {
+        console.log('Error resetting choices:', e);
+      }
     }
   }
 
   function openEditModal(rateData) {
     if (editRateModal) {
       document.getElementById('editRateId').value = rateData.rateId;
-      document.getElementById('editRateCountry').value = rateData.country;
-      document.getElementById('editRateRegion').value = rateData.region || '';
+
+      if (editCountryChoices) {
+        editCountryChoices.setChoiceByValue(rateData.country);
+        loadRegionsForCountry(rateData.country, editRegionChoices);
+      }
+      if (editRegionChoices) {
+        editRegionChoices.setChoiceByValue(rateData.region || '');
+      }
+
       document.getElementById('editRateMinWeight').value = rateData.minWeight;
       document.getElementById('editRateMaxWeight').value = rateData.maxWeight;
       document.getElementById('editRateFlatRate').value = rateData.flatRate;
@@ -289,6 +331,12 @@ function initializeRateTableModals() {
     if (editRateModal) {
       editRateModal.classList.add('hidden');
       editRateForm.reset();
+      try {
+        if (editCountryChoices) editCountryChoices.setChoiceByValue('');
+        if (editRegionChoices) editRegionChoices.setChoiceByValue('');
+      } catch (e) {
+        console.log('Error resetting edit choices:', e);
+      }
     }
   }
 
@@ -330,7 +378,6 @@ function initializeRateTableModals() {
         flatRate: e.target.dataset.rateFlatRate,
         minCharge: e.target.dataset.rateMinCharge
       };
-      
       openEditModal(rateData);
     }
   });
@@ -374,14 +421,12 @@ function initializeRateTableModals() {
   if (addRateForm) {
     addRateForm.addEventListener('submit', function(e) {
       e.preventDefault();
-      
-      // Limpiar errores anteriores
+
       clearFormErrors();
-      
+
       const formData = new FormData(addRateForm);
       const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-      
-      // Mostrar loading state
+
       const submitBtn = addRateForm.querySelector('button[type="submit"]');
       const originalText = submitBtn.textContent;
       submitBtn.textContent = 'Creating...';
@@ -398,11 +443,9 @@ function initializeRateTableModals() {
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          // Éxito: cerrar modal y recargar página
           closeAddModal();
-          window.location.reload();
+          Turbo.visit(window.location.href, { action: 'replace' });
         } else {
-          // Error: mostrar errores en el modal
           showFormErrors(data.errors);
         }
       })
@@ -411,7 +454,6 @@ function initializeRateTableModals() {
         showFormErrors(['An unexpected error occurred. Please try again.']);
       })
       .finally(() => {
-        // Restaurar botón
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
       });
@@ -424,10 +466,10 @@ function initializeRateTableModals() {
       errorContainer.remove();
     }
   }
-  
+
   function showFormErrors(errors) {
     clearFormErrors();
-    
+
     const errorHtml = `
       <div id="addRateErrors" class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
         <div class="flex">
@@ -447,28 +489,28 @@ function initializeRateTableModals() {
         </div>
       </div>
     `;
-    
+
     addRateForm.insertAdjacentHTML('afterbegin', errorHtml);
   }
 
   if (editRateForm) {
     editRateForm.addEventListener('submit', function(e) {
       e.preventDefault();
-      
+
       const formData = new FormData(editRateForm);
       const rateId = formData.get('rate[id]');
-      
+
       const updateUrl = `${window.location.origin}/rates/${rateId}`;
-      
+
       editRateForm.action = updateUrl;
       editRateForm.method = 'post';
-      
+
       const methodField = document.createElement('input');
       methodField.type = 'hidden';
       methodField.name = '_method';
       methodField.value = 'patch';
       editRateForm.appendChild(methodField);
-      
+
       const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
       const csrfField = document.createElement('input');
       csrfField.type = 'hidden';
@@ -484,23 +526,395 @@ function initializeRateTableModals() {
     const form = document.createElement('form');
     form.method = 'post';
     form.action = deleteUrl;
-    
+
     const methodField = document.createElement('input');
     methodField.type = 'hidden';
     methodField.name = '_method';
     methodField.value = 'delete';
     form.appendChild(methodField);
-    
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const csrfField = document.createElement('input');
     csrfField.type = 'hidden';
     csrfField.name = 'authenticity_token';
     csrfField.value = csrfToken;
     form.appendChild(csrfField);
-    
+
     document.body.appendChild(form);
     form.submit();
   }
+}
+
+function cleanupChoices() {
+  if (countryChoices) {
+    try {
+      countryChoices.destroy();
+    } catch (e) {
+      console.log('Error destroying countryChoices:', e);
+    }
+    countryChoices = null;
+  }
+  
+  if (regionChoices) {
+    try {
+      regionChoices.destroy();
+    } catch (e) {
+      console.log('Error destroying regionChoices:', e);
+    }
+    regionChoices = null;
+  }
+  
+  if (editCountryChoices) {
+    try {
+      editCountryChoices.destroy();
+    } catch (e) {
+      console.log('Error destroying editCountryChoices:', e);
+    }
+    editCountryChoices = null;
+  }
+  
+  if (editRegionChoices) {
+    try {
+      editRegionChoices.destroy();
+    } catch (e) {
+      console.log('Error destroying editRegionChoices:', e);
+    }
+    editRegionChoices = null;
+  }
+  
+  const elements = ['rateCountry', 'rateRegion', 'editRateCountry', 'editRateRegion'];
+  elements.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.removeAttribute('data-choices-initialized');
+    }
+  });
+}
+
+function initializeChoices() {
+  cleanupChoices();
+  
+  const rateCountryEl = document.getElementById('rateCountry');
+  if (rateCountryEl && !rateCountryEl.hasAttribute('data-choices-initialized')) {
+    countryChoices = new Choices('#rateCountry', {
+      searchEnabled: true,
+      placeholder: true,
+      placeholderValue: 'Select a country...',
+      searchPlaceholderValue: 'Search countries...',
+      noResultsText: 'No countries found',
+      noChoicesText: 'No countries available',
+      itemSelectText: 'Press to select',
+      shouldSort: false
+    });
+    rateCountryEl.setAttribute('data-choices-initialized', 'true');
+  }
+
+  const rateRegionEl = document.getElementById('rateRegion');
+  if (rateRegionEl && !rateRegionEl.hasAttribute('data-choices-initialized')) {
+    regionChoices = new Choices('#rateRegion', {
+      searchEnabled: true,
+      placeholder: true,
+      placeholderValue: 'Select a region...',
+      searchPlaceholderValue: 'Search regions...',
+      noResultsText: 'No regions found',
+      noChoicesText: 'No regions available',
+      itemSelectText: 'Press to select',
+      shouldSort: false
+    });
+    rateRegionEl.setAttribute('data-choices-initialized', 'true');
+  }
+
+  const editRateCountryEl = document.getElementById('editRateCountry');
+  if (editRateCountryEl && !editRateCountryEl.hasAttribute('data-choices-initialized')) {
+    editCountryChoices = new Choices('#editRateCountry', {
+      searchEnabled: true,
+      placeholder: true,
+      placeholderValue: 'Select a country...',
+      searchPlaceholderValue: 'Search countries...',
+      noResultsText: 'No countries found',
+      noChoicesText: 'No countries available',
+      itemSelectText: 'Press to select',
+      shouldSort: false
+    });
+    editRateCountryEl.setAttribute('data-choices-initialized', 'true');
+  }
+
+  const editRateRegionEl = document.getElementById('editRateRegion');
+  if (editRateRegionEl && !editRateRegionEl.hasAttribute('data-choices-initialized')) {
+    editRegionChoices = new Choices('#editRateRegion', {
+      searchEnabled: true,
+      placeholder: true,
+      placeholderValue: 'Select a region...',
+      searchPlaceholderValue: 'Search regions...',
+      noResultsText: 'No regions found',
+      noChoicesText: 'No regions available',
+      itemSelectText: 'Press to select',
+      shouldSort: false
+    });
+    editRateRegionEl.setAttribute('data-choices-initialized', 'true');
+  }
+
+  if (countryChoices) {
+    countryChoices.passedElement.element.addEventListener('choice', (event) => {
+      console.log('Country choice event triggered:', event.detail);
+      const selectedValue = event.detail.choice.value;
+      if (selectedValue) {
+        loadRegionsForCountry(selectedValue, regionChoices);
+      }
+    });
+  }
+
+  if (editCountryChoices) {
+    editCountryChoices.passedElement.element.addEventListener('choice', (event) => {
+      console.log('Edit country choice event triggered:', event.detail);
+      const selectedValue = event.detail.choice.value;
+      if (selectedValue) {
+        loadRegionsForCountry(selectedValue, editRegionChoices);
+      }
+    });
+  }
+
+  if (rateCountryEl) {
+    rateCountryEl.addEventListener('change', (event) => {
+      console.log('Direct country change event:', event.target.value);
+      if (event.target.value && regionChoices) {
+        loadRegionsForCountry(event.target.value, regionChoices);
+      }
+    });
+  }
+  
+  if (editRateCountryEl) {
+    editRateCountryEl.addEventListener('change', (event) => {
+      console.log('Direct edit country change event:', event.target.value);
+      if (event.target.value && editRegionChoices) {
+        loadRegionsForCountry(event.target.value, editRegionChoices);
+      }
+    });
+  }
+}
+
+async function loadCountriesData() {
+  try {
+    const response = await fetch('https://restcountries.com/v3.1/all?fields=name,cca2');
+    const countries = await response.json();
+    
+    const countryOptions = countries.map(country => ({
+      value: country.cca2,
+      label: `${country.name.common} (${country.cca2})`
+    }));
+    
+    countryOptions.sort((a, b) => a.label.localeCompare(b.label));
+    
+    if (countryChoices) {
+      countryChoices.setChoices(countryOptions, 'value', 'label', true);
+    }
+    if (editCountryChoices) {
+      editCountryChoices.setChoices(countryOptions, 'value', 'label', true);
+    }
+    
+  } catch (error) {
+    console.error('Error loading countries:', error);
+    loadFallbackCountries();
+  }
+}
+
+function loadFallbackCountries() {
+  const commonCountries = [
+    { value: 'US', label: 'United States (US)' },
+    { value: 'CA', label: 'Canada (CA)' },
+    { value: 'MX', label: 'Mexico (MX)' },
+    { value: 'GB', label: 'United Kingdom (GB)' },
+    { value: 'AU', label: 'Australia (AU)' },
+    { value: 'DE', label: 'Germany (DE)' },
+    { value: 'FR', label: 'France (FR)' },
+    { value: 'IT', label: 'Italy (IT)' },
+    { value: 'ES', label: 'Spain (ES)' },
+    { value: 'BR', label: 'Brazil (BR)' },
+    { value: 'AR', label: 'Argentina (AR)' },
+    { value: 'CL', label: 'Chile (CL)' },
+    { value: 'CO', label: 'Colombia (CO)' },
+    { value: 'PE', label: 'Peru (PE)' },
+    { value: 'JP', label: 'Japan (JP)' },
+    { value: 'CN', label: 'China (CN)' },
+    { value: 'IN', label: 'India (IN)' },
+    { value: 'KR', label: 'South Korea (KR)' },
+    { value: 'SG', label: 'Singapore (SG)' },
+    { value: 'NL', label: 'Netherlands (NL)' }
+  ];
+  
+  if (countryChoices) {
+    countryChoices.setChoices(commonCountries, 'value', 'label', true);
+  }
+  if (editCountryChoices) {
+    editCountryChoices.setChoices(commonCountries, 'value', 'label', true);
+  }
+}
+
+async function loadRegionsForCountry(countryCode, regionChoicesInstance) {
+  console.log('Loading regions for country:', countryCode);
+  console.log('Region choices instance:', regionChoicesInstance);
+  
+  const regions = await getRegionsForCountry(countryCode);
+  console.log('Found regions:', regions);
+  
+  if (regions.length === 0) {
+    console.log('No regions found, setting empty option');
+    regionChoicesInstance.setChoices([{ value: '', label: 'No regions available' }], 'value', 'label', true);
+    return;
+  }
+  
+  const regionOptions = regions.map(region => ({
+    label: region.name
+  }));
+  
+  console.log('Setting region options:', regionOptions);
+  
+  regionChoicesInstance.clearChoices();
+  regionChoicesInstance.setChoices(regionOptions, 'value', 'label', true);
+  
+  console.log('Region choices updated successfully');
+}
+
+async function getRegionsForCountry(countryCode) {
+  const localRegions = getLocalRegionsForCountry(countryCode);
+  if (localRegions.length > 0) {
+    return localRegions;
+  }
+  
+  try {
+    console.log('Fetching regions from API for:', countryCode);
+    const response = await fetch(`https://restcountries.com/v3.1/alpha/${countryCode}?fields=subregion,region`);
+    const countryData = await response.json();
+    
+    if (countryData.subregion) {
+      return [{ name: countryData.subregion, code: countryData.subregion }];
+    } else if (countryData.region) {
+      return [{ name: countryData.region, code: countryData.region }];
+    }
+  } catch (error) {
+    console.error('Error fetching regions from API:', error);
+  }
+  
+  return [];
+}
+
+function getLocalRegionsForCountry(countryCode) {
+  const regionMap = {
+    'US': [
+      { name: 'Alabama', code: 'AL' }, { name: 'Alaska', code: 'AK' }, { name: 'Arizona', code: 'AZ' },
+      { name: 'Arkansas', code: 'AR' }, { name: 'California', code: 'CA' }, { name: 'Colorado', code: 'CO' },
+      { name: 'Connecticut', code: 'CT' }, { name: 'Delaware', code: 'DE' }, { name: 'Florida', code: 'FL' },
+      { name: 'Georgia', code: 'GA' }, { name: 'Hawaii', code: 'HI' }, { name: 'Idaho', code: 'ID' },
+      { name: 'Illinois', code: 'IL' }, { name: 'Indiana', code: 'IN' }, { name: 'Iowa', code: 'IA' },
+      { name: 'Kansas', code: 'KS' }, { name: 'Kentucky', code: 'KY' }, { name: 'Louisiana', code: 'LA' },
+      { name: 'Maine', code: 'ME' }, { name: 'Maryland', code: 'MD' }, { name: 'Massachusetts', code: 'MA' },
+      { name: 'Michigan', code: 'MI' }, { name: 'Minnesota', code: 'MN' }, { name: 'Mississippi', code: 'MS' },
+      { name: 'Missouri', code: 'MO' }, { name: 'Montana', code: 'MT' }, { name: 'Nebraska', code: 'NE' },
+      { name: 'Nevada', code: 'NV' }, { name: 'New Hampshire', code: 'NH' }, { name: 'New Jersey', code: 'NJ' },
+      { name: 'New Mexico', code: 'NM' }, { name: 'New York', code: 'NY' }, { name: 'North Carolina', code: 'NC' },
+      { name: 'North Dakota', code: 'ND' }, { name: 'Ohio', code: 'OH' }, { name: 'Oklahoma', code: 'OK' },
+      { name: 'Oregon', code: 'OR' }, { name: 'Pennsylvania', code: 'PA' }, { name: 'Rhode Island', code: 'RI' },
+      { name: 'South Carolina', code: 'SC' }, { name: 'South Dakota', code: 'SD' }, { name: 'Tennessee', code: 'TN' },
+      { name: 'Texas', code: 'TX' }, { name: 'Utah', code: 'UT' }, { name: 'Vermont', code: 'VT' },
+      { name: 'Virginia', code: 'VA' }, { name: 'Washington', code: 'WA' }, { name: 'West Virginia', code: 'WV' },
+      { name: 'Wisconsin', code: 'WI' }, { name: 'Wyoming', code: 'WY' }
+    ],
+    'CA': [
+      { name: 'Alberta', code: 'AB' }, { name: 'British Columbia', code: 'BC' }, { name: 'Manitoba', code: 'MB' },
+      { name: 'New Brunswick', code: 'NB' }, { name: 'Newfoundland and Labrador', code: 'NL' },
+      { name: 'Northwest Territories', code: 'NT' }, { name: 'Nova Scotia', code: 'NS' }, { name: 'Nunavut', code: 'NU' },
+      { name: 'Ontario', code: 'ON' }, { name: 'Prince Edward Island', code: 'PE' }, { name: 'Quebec', code: 'QC' },
+      { name: 'Saskatchewan', code: 'SK' }, { name: 'Yukon', code: 'YT' }
+    ],
+    'MX': [
+      { name: 'Aguascalientes', code: 'AGU' }, { name: 'Baja California', code: 'BCN' },
+      { name: 'Baja California Sur', code: 'BCS' }, { name: 'Campeche', code: 'CAM' },
+      { name: 'Chiapas', code: 'CHP' }, { name: 'Chihuahua', code: 'CHH' }, { name: 'Coahuila', code: 'COA' },
+      { name: 'Colima', code: 'COL' }, { name: 'Durango', code: 'DUR' }, { name: 'Guanajuato', code: 'GUA' },
+      { name: 'Guerrero', code: 'GRO' }, { name: 'Hidalgo', code: 'HID' }, { name: 'Jalisco', code: 'JAL' },
+      { name: 'México', code: 'MEX' }, { name: 'Michoacán', code: 'MIC' }, { name: 'Morelos', code: 'MOR' },
+      { name: 'Nayarit', code: 'NAY' }, { name: 'Nuevo León', code: 'NLE' }, { name: 'Oaxaca', code: 'OAX' },
+      { name: 'Puebla', code: 'PUE' }, { name: 'Querétaro', code: 'QUE' }, { name: 'Quintana Roo', code: 'ROO' },
+      { name: 'San Luis Potosí', code: 'SLP' }, { name: 'Sinaloa', code: 'SIN' }, { name: 'Sonora', code: 'SON' },
+      { name: 'Tabasco', code: 'TAB' }, { name: 'Tamaulipas', code: 'TAM' }, { name: 'Tlaxcala', code: 'TLA' },
+      { name: 'Veracruz', code: 'VER' }, { name: 'Yucatán', code: 'YUC' }, { name: 'Zacatecas', code: 'ZAC' }
+    ],
+    'GB': [
+      { name: 'England', code: 'ENG' }, { name: 'Scotland', code: 'SCT' },
+      { name: 'Wales', code: 'WLS' }, { name: 'Northern Ireland', code: 'NIR' }
+    ],
+    'AU': [
+      { name: 'New South Wales', code: 'NSW' }, { name: 'Victoria', code: 'VIC' },
+      { name: 'Queensland', code: 'QLD' }, { name: 'Western Australia', code: 'WA' },
+      { name: 'South Australia', code: 'SA' }, { name: 'Tasmania', code: 'TAS' },
+      { name: 'Australian Capital Territory', code: 'ACT' }, { name: 'Northern Territory', code: 'NT' }
+    ],
+    'DE': [
+      { name: 'Baden-Württemberg', code: 'BW' }, { name: 'Bavaria', code: 'BY' }, { name: 'Berlin', code: 'BE' },
+      { name: 'Brandenburg', code: 'BB' }, { name: 'Bremen', code: 'HB' }, { name: 'Hamburg', code: 'HH' },
+      { name: 'Hesse', code: 'HE' }, { name: 'Mecklenburg-Vorpommern', code: 'MV' }, { name: 'Lower Saxony', code: 'NI' },
+      { name: 'North Rhine-Westphalia', code: 'NW' }, { name: 'Rhineland-Palatinate', code: 'RP' },
+      { name: 'Saarland', code: 'SL' }, { name: 'Saxony', code: 'SN' }, { name: 'Saxony-Anhalt', code: 'ST' },
+      { name: 'Schleswig-Holstein', code: 'SH' }, { name: 'Thuringia', code: 'TH' }
+    ],
+    'FR': [
+      { name: 'Auvergne-Rhône-Alpes', code: 'ARA' }, { name: 'Bourgogne-Franche-Comté', code: 'BFC' },
+      { name: 'Brittany', code: 'BRE' }, { name: 'Centre-Val de Loire', code: 'CVL' },
+      { name: 'Corsica', code: 'COR' }, { name: 'Grand Est', code: 'GES' }, { name: 'Hauts-de-France', code: 'HDF' },
+      { name: 'Île-de-France', code: 'IDF' }, { name: 'Normandy', code: 'NOR' }, { name: 'Nouvelle-Aquitaine', code: 'NAQ' },
+      { name: 'Occitanie', code: 'OCC' }, { name: 'Pays de la Loire', code: 'PDL' },
+      { name: "Provence-Alpes-Côte d'Azur", code: 'PAC' }
+    ],
+    'IT': [
+      { name: 'Abruzzo', code: 'ABR' }, { name: 'Basilicata', code: 'BAS' }, { name: 'Calabria', code: 'CAL' },
+      { name: 'Campania', code: 'CAM' }, { name: 'Emilia-Romagna', code: 'EMR' }, { name: 'Friuli-Venezia Giulia', code: 'FVG' },
+      { name: 'Lazio', code: 'LAZ' }, { name: 'Liguria', code: 'LIG' }, { name: 'Lombardy', code: 'LOM' },
+      { name: 'Marche', code: 'MAR' }, { name: 'Molise', code: 'MOL' }, { name: 'Piedmont', code: 'PIE' },
+      { name: 'Apulia', code: 'PUG' }, { name: 'Sardinia', code: 'SAR' }, { name: 'Sicily', code: 'SIC' },
+      { name: 'Tuscany', code: 'TOS' }, { name: 'Trentino-Alto Adige', code: 'TAA' }, { name: 'Umbria', code: 'UMB' },
+      { name: 'Aosta Valley', code: 'VDA' }, { name: 'Veneto', code: 'VEN' }
+    ],
+    'ES': [
+      { name: 'Andalusia', code: 'AN' }, { name: 'Aragon', code: 'AR' }, { name: 'Asturias', code: 'AS' },
+      { name: 'Balearic Islands', code: 'IB' }, { name: 'Canary Islands', code: 'CN' }, { name: 'Cantabria', code: 'CB' },
+      { name: 'Castile and León', code: 'CL' }, { name: 'Castilla-La Mancha', code: 'CM' }, { name: 'Catalonia', code: 'CT' },
+      { name: 'Extremadura', code: 'EX' }, { name: 'Galicia', code: 'GA' }, { name: 'La Rioja', code: 'RI' },
+      { name: 'Madrid', code: 'MD' }, { name: 'Murcia', code: 'MC' }, { name: 'Navarre', code: 'NC' },
+      { name: 'Basque Country', code: 'PV' }, { name: 'Valencian Community', code: 'VC' }
+    ],
+    'BR': [
+      { name: 'Acre', code: 'AC' }, { name: 'Alagoas', code: 'AL' }, { name: 'Amapá', code: 'AP' },
+      { name: 'Amazonas', code: 'AM' }, { name: 'Bahia', code: 'BA' }, { name: 'Ceará', code: 'CE' },
+      { name: 'Distrito Federal', code: 'DF' }, { name: 'Espírito Santo', code: 'ES' }, { name: 'Goiás', code: 'GO' },
+      { name: 'Maranhão', code: 'MA' }, { name: 'Mato Grosso', code: 'MT' }, { name: 'Mato Grosso do Sul', code: 'MS' },
+      { name: 'Minas Gerais', code: 'MG' }, { name: 'Pará', code: 'PA' }, { name: 'Paraíba', code: 'PB' },
+      { name: 'Paraná', code: 'PR' }, { name: 'Pernambuco', code: 'PE' }, { name: 'Piauí', code: 'PI' },
+      { name: 'Rio de Janeiro', code: 'RJ' }, { name: 'Rio Grande do Norte', code: 'RN' },
+      { name: 'Rio Grande do Sul', code: 'RS' }, { name: 'Rondônia', code: 'RO' }, { name: 'Roraima', code: 'RR' },
+      { name: 'Santa Catarina', code: 'SC' }, { name: 'São Paulo', code: 'SP' }, { name: 'Sergipe', code: 'SE' },
+      { name: 'Tocantins', code: 'TO' }
+    ],
+    'AR': [
+      { name: 'Buenos Aires', code: 'BA' }, { name: 'Catamarca', code: 'CT' }, { name: 'Chaco', code: 'CC' },
+      { name: 'Chubut', code: 'CH' }, { name: 'Córdoba', code: 'CB' }, { name: 'Corrientes', code: 'CR' },
+      { name: 'Entre Ríos', code: 'ER' }, { name: 'Formosa', code: 'FM' }, { name: 'Jujuy', code: 'JY' },
+      { name: 'La Pampa', code: 'LP' }, { name: 'La Rioja', code: 'LR' }, { name: 'Mendoza', code: 'MZ' },
+      { name: 'Misiones', code: 'MN' }, { name: 'Neuquén', code: 'NQ' }, { name: 'Río Negro', code: 'RN' },
+      { name: 'Salta', code: 'SA' }, { name: 'San Juan', code: 'SJ' }, { name: 'San Luis', code: 'SL' },
+      { name: 'Santa Cruz', code: 'SC' }, { name: 'Santa Fe', code: 'SF' }, { name: 'Santiago del Estero', code: 'SE' },
+      { name: 'Tierra del Fuego', code: 'TF' }, { name: 'Tucumán', code: 'TM' }
+    ],
+    'CL': [
+      { name: 'Arica y Parinacota', code: 'AP' }, { name: 'Tarapacá', code: 'TA' }, { name: 'Antofagasta', code: 'AN' },
+      { name: 'Atacama', code: 'AT' }, { name: 'Coquimbo', code: 'CO' }, { name: 'Valparaíso', code: 'VS' },
+      { name: 'Metropolitana', code: 'RM' }, { name: "O'Higgins", code: 'LI' }, { name: 'Maule', code: 'ML' },
+      { name: 'Ñuble', code: 'NB' }, { name: 'Biobío', code: 'BI' }, { name: 'La Araucanía', code: 'AR' },
+      { name: 'Los Ríos', code: 'LR' }, { name: 'Los Lagos', code: 'LL' }, { name: 'Aysén', code: 'AI' },
+      { name: 'Magallanes', code: 'MA' }
+    ]
+  };
+
+  return regionMap[countryCode] || [];
 }
 
 if (document.readyState === 'loading') {
@@ -511,4 +925,7 @@ if (document.readyState === 'loading') {
 
 document.addEventListener('turbo:load', initializeRateTableModals);
 document.addEventListener('turbo:render', initializeRateTableModals);
+
+document.addEventListener('turbo:before-cache', cleanupChoices);
+document.addEventListener('turbo:before-render', cleanupChoices);
 </script>

@@ -20,10 +20,18 @@ class ShippingOptionsController < ApplicationController
     @new_shipping_option = @company.shipping_options.build(shipping_option_params)
 
     if @new_shipping_option.save
-      redirect_to shipping_methods_shipping_options_path, notice: "Shipping method was successfully created."
+      if request.xhr?
+        render json: { success: true, message: "Shipping method was successfully created." }
+      else
+        redirect_to shipping_methods_shipping_options_path, notice: "Shipping method was successfully created."
+      end
     else
-      @shipping_options = @company.shipping_options.active
-      render :shipping_methods
+      if request.xhr?
+        render json: { success: false, errors: @new_shipping_option.errors.full_messages }
+      else
+        @shipping_options = @company.shipping_options.active
+        render :shipping_methods
+      end
     end
   end
 
@@ -31,19 +39,35 @@ class ShippingOptionsController < ApplicationController
 
   def update
     if @shipping_option.update(shipping_option_params)
-      redirect_to shipping_methods_shipping_options_path, notice: "Shipping method was successfully updated."
+      if request.xhr?
+        render json: { success: true, message: "Shipping method was successfully updated." }
+      else
+        redirect_to shipping_methods_shipping_options_path, notice: "Shipping method was successfully updated."
+      end
     else
-      @shipping_options = @company.shipping_options.active
-      @new_shipping_option = @company.shipping_options.build
-      render :shipping_methods, status: :unprocessable_entity
+      if request.xhr?
+        render json: { success: false, errors: @shipping_option.errors.full_messages }
+      else
+        @shipping_options = @company.shipping_options.active
+        @new_shipping_option = @company.shipping_options.build
+        render :shipping_methods, status: :unprocessable_entity
+      end
     end
   end
 
   def disable
     if @shipping_option.update(status: "inactive")
-      redirect_to shipping_methods_shipping_options_path, notice: "Shipping method was successfully disabled."
+      if request.xhr?
+        render json: { success: true, message: "Shipping method was successfully disabled." }
+      else
+        redirect_to shipping_methods_shipping_options_path, notice: "Shipping method was successfully disabled."
+      end
     else
-      redirect_to shipping_methods_shipping_options_path, alert: "Failed to disable shipping method."
+      if request.xhr?
+        render json: { success: false, errors: @shipping_option.errors.full_messages }
+      else
+        redirect_to shipping_methods_shipping_options_path, alert: "Failed to disable shipping method."
+      end
     end
   end
 
@@ -80,6 +104,12 @@ private
   end
 
   def shipping_option_params
-    params.require(:shipping_option).permit(:name, :delivery_time, :starting_rate, :status, :countries)
+    permitted_params = params.require(:shipping_option).permit(:name, :delivery_time, :starting_rate, :status, countries: [])
+
+    if permitted_params[:countries].is_a?(Array)
+      permitted_params[:countries] = permitted_params[:countries].reject(&:blank?)
+    end
+
+    permitted_params
   end
 end
