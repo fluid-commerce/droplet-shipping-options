@@ -17,7 +17,7 @@
     <%= vite_typescript_tag 'application' %>
     <%= yield :head %>
   </head>
-  <body class="h-full antialiased">
+  <body class="h-full antialiased" data-turbo="false">
     <div class="flex min-h-screen w-full">
       <%= render partial: 'shared/sidebar' %>
 
