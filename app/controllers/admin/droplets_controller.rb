@@ -3,9 +3,9 @@ class Admin::DropletsController < AdminController
     result = DropletUseCase::Create.call
 
     if result[:success]
-      redirect_to admin_dashboard_index_path, notice: "Droplet created successfully"
+      redirect_to admin_dashboard_path, notice: "Droplet created successfully"
     else
-      redirect_to admin_dashboard_index_path, alert: "Failed to create droplet: #{result[:error]}"
+      redirect_to admin_dashboard_path, alert: "Failed to create droplet: #{result[:error]}"
     end
   end
 
@@ -13,9 +13,9 @@ class Admin::DropletsController < AdminController
     result = DropletUseCase::Update.call
 
     if result[:success]
-      redirect_to admin_dashboard_index_path, notice: "Droplet updated successfully"
+      redirect_to admin_dashboard_path, notice: "Droplet updated successfully"
     else
-      redirect_to admin_dashboard_index_path, alert: "Failed to update droplet: #{result[:error]}"
+      redirect_to admin_dashboard_path, alert: "Failed to update droplet: #{result[:error]}"
     end
   end
 end
