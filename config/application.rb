@@ -26,8 +26,8 @@ module DropletTemplate
       "<span class='text-orange-600'>#{html_tag}</span>".html_safe
     }
 
-    config.session_store :cookie_store, 
-      key: '_droplet_shipping_options_session',
+    config.session_store :cookie_store,
+      key: "_droplet_shipping_options_session",
       secure: Rails.env.production?,
       httponly: true,
       same_site: :none
