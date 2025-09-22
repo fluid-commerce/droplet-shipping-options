@@ -7,7 +7,6 @@
     %>
     
     <%= link_to shipping_options_path, 
-        data: { turbo_frame: "shipping_content" },
         class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-blue-50 text-blue-700 border border-blue-200' if is_overview} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_overview}",
         data: { turbo_frame: "shipping_content", tab: "overview" } do %>
       <i class="fa-solid fa-grid-3 mr-2"></i>
@@ -15,7 +14,6 @@
     <% end %>
     
     <%= link_to shipping_methods_shipping_options_path, 
-        data: { turbo_frame: "shipping_content" },
         class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-blue-50 text-blue-700 border border-blue-200' if is_shipping_methods} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_shipping_methods}",
         data: { turbo_frame: "shipping_content", tab: "shipping_methods" } do %>
       <i class="fa-solid fa-list mr-2"></i>
@@ -23,7 +21,6 @@
     <% end %>
     
     <%= link_to rate_tables_path, 
-        data: { turbo_frame: "shipping_content" },
         class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-blue-50 text-blue-700 border border-blue-200' if is_rate_tables} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_rate_tables}",
         data: { turbo_frame: "shipping_content", tab: "rate_tables" } do %>
       <i class="fa-solid fa-arrows-up-down mr-2"></i>
