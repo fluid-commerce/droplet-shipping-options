@@ -87,7 +87,20 @@ private
   end
 
   def payload
-    @payload ||= params.permit!.to_h.deep_symbolize_keys
+    @payload ||= params.permit(
+      cart: [
+        :id,
+        items: [
+          :id,
+          :name,
+          :quantity,
+          :price,
+          :weight,
+          dimensions: %i[length width height],
+        ],
+        company: %i[id name],
+        ship_to: %i[country_code state city zip address1 address2],
+      ]
+    ).to_h.deep_symbolize_keys
   end
-
 end

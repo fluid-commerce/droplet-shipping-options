@@ -104,7 +104,9 @@ private
   end
 
   def shipping_option_params
-    permitted_params = params.require(:shipping_option).permit(:name, :delivery_time, :starting_rate, :status, countries: [])
+    permitted_params = params.require(:shipping_option).permit(
+      :name, :delivery_time, :starting_rate, :status, countries: []
+    )
 
     if permitted_params[:countries].is_a?(Array)
       permitted_params[:countries] = permitted_params[:countries].reject(&:blank?)

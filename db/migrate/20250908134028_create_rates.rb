@@ -13,8 +13,8 @@ class CreateRates < ActiveRecord::Migration[8.0]
       t.timestamps
     end
 
-    add_index :rates, [:shipping_option_id, :ship_method_id, :country, :region], 
+    add_index :rates, %i[shipping_option_id ship_method_id country region],
               name: 'index_rates_on_shipping_option_and_method_and_location'
-    add_index :rates, [:country, :region]
+    add_index :rates, %i[country region]
   end
 end

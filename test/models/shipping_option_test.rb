@@ -7,7 +7,7 @@ class ShippingOptionTest < ActiveSupport::TestCase
       name: "Express Shipping",
       delivery_time: 2,
       starting_rate: 15.99,
-      countries: ["US", "CA"],
+      countries: %w[US CA],
       status: "active",
       company: @company
     )
@@ -90,16 +90,16 @@ class ShippingOptionTest < ActiveSupport::TestCase
       name: "Active Option",
       delivery_time: 1,
       starting_rate: 10.00,
-      countries: ["US"],
+      countries: %w[US],
       status: "active",
       company: @company
     )
-    
+
     inactive_option = ShippingOption.create!(
       name: "Inactive Option",
       delivery_time: 1,
       starting_rate: 10.00,
-      countries: ["US"],
+      countries: %w[US],
       status: "inactive",
       company: @company
     )
@@ -112,5 +112,4 @@ class ShippingOptionTest < ActiveSupport::TestCase
     @shipping_option.status = "active"
     assert @shipping_option.active?
   end
-
 end

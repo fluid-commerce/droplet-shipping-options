@@ -21,3 +21,14 @@ globex:
   service_company_id: globex-456
   active: true
   webhook_verification_token: globex-verify-token
+
+test_company:
+  name: Test Company
+  fluid_shop: test_shop
+  authentication_token: test_token
+  fluid_company_id: 1111111111
+  company_droplet_uuid: test-uuid-789
+  droplet_installation_uuid: test-dri
+  service_company_id: test-789
+  active: true
+  webhook_verification_token: test-verify-token

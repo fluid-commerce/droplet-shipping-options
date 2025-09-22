@@ -29,7 +29,6 @@ Rails.application.routes.draw do
       get :shipping_methods
     end
   end
-  
-  resources :rates, except: [:show], as: :rate_tables
 
+  resources :rates, except: [ :show ], as: :rate_tables
 end

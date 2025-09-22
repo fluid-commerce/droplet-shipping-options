@@ -7,7 +7,8 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
     @service = ShippingCalculationService.new(
       company: @company,
       ship_to_country: "US",
-      ship_to_state: "CA"
+      ship_to_state: "CA",
+      items: []
     )
   end
 
@@ -22,7 +23,8 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
     service = ShippingCalculationService.new(
       company: nil,
       ship_to_country: "US",
-      ship_to_state: "CA"
+      ship_to_state: "CA",
+      items: []
     )
 
     result = service.call
@@ -35,7 +37,8 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
     service = ShippingCalculationService.new(
       company: @company,
       ship_to_country: nil,
-      ship_to_state: "CA"
+      ship_to_state: "CA",
+      items: []
     )
 
     result = service.call
@@ -48,7 +51,8 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
     service = ShippingCalculationService.new(
       company: @company,
       ship_to_country: "US",
-      ship_to_state: nil
+      ship_to_state: nil,
+      items: []
     )
 
     result = service.call
@@ -62,7 +66,8 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
     service = ShippingCalculationService.new(
       company: @company,
       ship_to_country: "XX", # País inexistente
-      ship_to_state: "YY"
+      ship_to_state: "YY",
+      items: []
     )
 
     result = service.call
@@ -74,7 +79,6 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
   test "should calculate shipping total correctly with rate" do
     # Crear un rate específico
     rate = @shipping_option.rates.create!(
-      ship_method_id: 1,
       country: "US",
       region: "CA",
       min_range_lbs: 0,

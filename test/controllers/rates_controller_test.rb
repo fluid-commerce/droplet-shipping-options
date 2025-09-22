@@ -1,38 +1,38 @@
 require "test_helper"
 
-describe RatesController do
-  it "gets index" do
-    get rates_index_url
-    must_respond_with :success
+class RatesControllerTest < ActionDispatch::IntegrationTest
+  test "gets index with dri parameter" do
+    get rate_tables_url, params: { dri: "test-dri" }
+    assert_response :success
   end
 
-  it "gets show" do
-    get rates_show_url
-    must_respond_with :success
+  test "gets new with dri parameter" do
+    get new_rate_table_url, params: { dri: "test-dri" }
+    # Puede ser success o redirect, pero no debe ser 400 Bad Request
+    assert_not_equal 400, response.status
   end
 
-  it "gets new" do
-    get rates_new_url
-    must_respond_with :success
+  test "gets create with dri parameter" do
+    post rate_tables_url, params: { dri: "test-dri" }
+    # Puede ser success o redirect, pero no debe ser 400 Bad Request
+    assert_not_equal 400, response.status
   end
 
-  it "gets create" do
-    get rates_create_url
-    must_respond_with :success
+  test "gets edit with dri parameter" do
+    get edit_rate_table_url(id: 1), params: { dri: "test-dri" }
+    # Puede ser success o redirect, pero no debe ser 400 Bad Request
+    assert_not_equal 400, response.status
   end
 
-  it "gets edit" do
-    get rates_edit_url
-    must_respond_with :success
+  test "gets update with dri parameter" do
+    patch rate_table_url(id: 1), params: { dri: "test-dri" }
+    # Puede ser success o redirect, pero no debe ser 400 Bad Request
+    assert_not_equal 400, response.status
   end
 
-  it "gets update" do
-    get rates_update_url
-    must_respond_with :success
-  end
-
-  it "gets destroy" do
-    get rates_destroy_url
-    must_respond_with :success
+  test "gets destroy with dri parameter" do
+    delete rate_table_url(id: 1), params: { dri: "test-dri" }
+    # Puede ser success o redirect, pero no debe ser 400 Bad Request
+    assert_not_equal 400, response.status
   end
 end

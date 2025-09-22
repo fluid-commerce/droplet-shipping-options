@@ -5,7 +5,7 @@ describe Admin::DashboardController do
     Tasks::Settings.create_defaults
 
     sign_in users(:admin)
-    get admin_dashboard_index_url
+    get admin_dashboard_url
     must_respond_with :success
   end
 end

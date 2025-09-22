@@ -10,18 +10,6 @@ class RateTest < ActiveSupport::TestCase
   end
 
   describe "validations" do
-    test "ship_method_id should be present" do
-      @rate.ship_method_id = nil
-      assert_not @rate.valid?
-      assert_includes @rate.errors[:ship_method_id], "can't be blank"
-    end
-
-    test "ship_method_id should be greater than 0" do
-      @rate.ship_method_id = 0
-      assert_not @rate.valid?
-      assert_includes @rate.errors[:ship_method_id], "must be greater than 0"
-    end
-
     test "country should be present" do
       @rate.country = nil
       assert_not @rate.valid?
@@ -111,10 +99,9 @@ class RateTest < ActiveSupport::TestCase
   end
 
   describe "uniqueness validation" do
-    test "should not allow duplicate rates for same method and location" do
+    test "should not allow duplicate rates for same shipping option and location" do
       duplicate_rate = Rate.new(
         shipping_option: @rate.shipping_option,
-        ship_method_id: @rate.ship_method_id,
         country: @rate.country,
         region: @rate.region,
         min_range_lbs: 1.0,
@@ -124,13 +111,12 @@ class RateTest < ActiveSupport::TestCase
       )
 
       assert_not duplicate_rate.valid?
-      assert_includes duplicate_rate.errors[:base], "Rate already exists for this method and location"
+      assert_includes duplicate_rate.errors[:base], "Rate already exists for this shipping option and location"
     end
 
-    test "should allow same method for different locations" do
+    test "should allow same shipping option for different locations" do
       different_location_rate = Rate.new(
         shipping_option: @rate.shipping_option,
-        ship_method_id: @rate.ship_method_id,
         country: "CA",
         region: "ON",
         min_range_lbs: 0.1,

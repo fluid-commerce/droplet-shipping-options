@@ -1,9 +1,9 @@
 class RatesController < ApplicationController
   layout "application"
 
-  before_action :store_dri_in_session, only: [ :index ]
+  before_action :store_dri_in_session
   before_action :find_company_by_dri
-  before_action :find_shipping_option, only: [ :new, :create ]
+  before_action :find_shipping_option, only: %i[new create]
   before_action :find_rate, only: %i[edit update destroy]
 
   def index
@@ -12,7 +12,7 @@ class RatesController < ApplicationController
 
   def new
     @rate = @shipping_option.rates.build
-    @shipping_methods = @company.shipping_options.pluck(:id, :name).map { |id, name| ["#{name}", id] }
+    @shipping_methods = @company.shipping_options.pluck(:id, :name).map { |id, name| [ "#{name}", id ] }
   end
 
   def create
@@ -26,19 +26,19 @@ class RatesController < ApplicationController
       end
     else
       if request.xhr?
-        render json: { 
-          success: false, 
-          errors: @rate.errors.full_messages 
+        render json: {
+          success: false,
+          errors: @rate.errors.full_messages,
         }, status: :unprocessable_entity
       else
-        @shipping_methods = @company.shipping_options.pluck(:id, :name).map { |id, name| ["#{name}", id] }
+        @shipping_methods = @company.shipping_options.pluck(:id, :name).map { |id, name| [ "#{name}", id ] }
         render :new, status: :unprocessable_entity
       end
     end
   end
 
   def edit
-    @shipping_methods = @company.shipping_options.pluck(:id, :name).map { |id, name| ["#{name}", id] }
+    @shipping_methods = @company.shipping_options.pluck(:id, :name).map { |id, name| [ "#{name}", id ] }
   end
 
   def update
@@ -98,6 +98,9 @@ private
   end
 
   def rate_params
-    params.require(:rate).permit(:shipping_option_id, :country, :region, :min_range_lbs, :max_range_lbs, :flat_rate, :min_charge)
+    params.require(:rate).permit(
+      :shipping_option_id, :country, :region, :min_range_lbs,
+      :max_range_lbs, :flat_rate, :min_charge
+    )
   end
 end

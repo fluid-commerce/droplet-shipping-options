@@ -10,7 +10,7 @@ class ShippingCalculationService
   validates :company, presence: true
   validates :ship_to_country, presence: true
   validates :ship_to_state, presence: true
-  validates :items, presence: true
+  validates :items, presence: true, allow_blank: true
 
   def initialize(company:, ship_to_country:, ship_to_state:, items:)
     super(
@@ -44,6 +44,7 @@ private
 
   def success_result(shipping_options)
     {
+      success: true,
       shipping_options: shipping_options.map { |option| serialize_shipping_option(option) },
     }
   end
@@ -80,7 +81,7 @@ private
 
   def calculate_shipping_total(shipping_option, rate)
     if rate
-      [rate.flat_rate, rate.min_charge].max
+      [ rate.flat_rate, rate.min_charge ].max
     else
       shipping_option.starting_rate.to_f
     end

@@ -2,7 +2,6 @@
 
 one:
   shipping_option: standard_shipping
-  ship_method_id: 1
   country: "US"
   region: "CA"
   min_range_lbs: 0.1
@@ -12,7 +11,6 @@ one:
 
 two:
   shipping_option: standard_shipping
-  ship_method_id: 2
   country: "US"
   region: "NY"
   min_range_lbs: 0.1
@@ -22,7 +20,6 @@ two:
 
 three:
   shipping_option: express_shipping
-  ship_method_id: 1
   country: "CA"
   region: "ON"
   min_range_lbs: 0.1
@@ -32,7 +29,6 @@ three:
 
 four:
   shipping_option: standard_shipping
-  ship_method_id: 3
   country: "US"
   region: "TX"
   min_range_lbs: 0.1
@@ -42,7 +38,6 @@ four:
 
 five:
   shipping_option: express_shipping
-  ship_method_id: 2
   country: "CA"
   region: "BC"
   min_range_lbs: 0.1
