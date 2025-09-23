@@ -56,7 +56,7 @@
   isolation: isolate;
 }
 
-a {
+a:not([class*="text-"]) {
   text-decoration: none;
   @apply text-blue-500 hover:text-orange-600;
 }
