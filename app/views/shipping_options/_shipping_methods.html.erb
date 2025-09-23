@@ -48,14 +48,23 @@
                 <%= link_to edit_shipping_option_path(shipping_option), class: "text-blue-600 hover:text-blue-900 mr-3", data: { turbo_frame: "_top" } do %>
                   Edit
                 <% end %>
+                <%= link_to disable_shipping_option_path(shipping_option), method: :patch,
+                    class: "text-orange-600 hover:text-orange-900 mr-3",
+                    data: {
+                      turbo_method: :patch,
+                      turbo_confirm: "Are you sure you want to disable \"#{shipping_option.name}\"?",
+                      turbo_frame: "_top"
+                    } do %>
+                  Disable
+                <% end %>
                 <%= link_to shipping_option_path(shipping_option), method: :delete,
                     class: "text-red-600 hover:text-red-900",
                     data: {
                       turbo_method: :delete,
-                      turbo_confirm: "Are you sure you want to disable \"#{shipping_option.name}\"? This action cannot be undone.",
+                      turbo_confirm: "Are you sure you want to DELETE \"#{shipping_option.name}\"? This action cannot be undone and will permanently remove this shipping method.",
                       turbo_frame: "_top"
                     } do %>
-                  Disable
+                  Delete
                 <% end %>
               </td>
             </tr>
