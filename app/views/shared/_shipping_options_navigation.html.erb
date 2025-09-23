@@ -31,11 +31,13 @@
 
 <script>
 // Handle tab navigation and active states
-document.addEventListener('DOMContentLoaded', function() {
+function initializeNavigation() {
+  console.log('Initializing navigation...');
+  
   // Function to update active tab
   function updateActiveTab(activeTab) {
     console.log('Updating active tab to:', activeTab);
-
+    
     // Remove active class from all tabs
     document.querySelectorAll('.nav-tab').forEach(tab => {
       tab.classList.remove('bg-blue-50', 'text-blue-700', 'border', 'border-blue-200');
@@ -55,16 +57,20 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Store the currently active tab
   let currentActiveTab = 'overview'; // Default to overview
-
+  
   // Add click listeners to tabs
   document.querySelectorAll('.nav-tab').forEach(tab => {
-    tab.addEventListener('click', function(e) {
-      const tabName = this.getAttribute('data-tab');
-      console.log('Tab clicked:', tabName);
-      currentActiveTab = tabName; // Store the clicked tab
-      updateActiveTab(tabName);
-    });
+    // Remove existing listeners to prevent duplicates
+    tab.removeEventListener('click', handleTabClick);
+    tab.addEventListener('click', handleTabClick);
   });
+  
+  function handleTabClick(e) {
+    const tabName = this.getAttribute('data-tab');
+    console.log('Tab clicked:', tabName);
+    currentActiveTab = tabName; // Store the clicked tab
+    updateActiveTab(tabName);
+  }
   
   // Listen for turbo frame loads to update active state
   document.addEventListener('turbo:frame-load', function(e) {
@@ -75,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
       updateActiveTab(currentActiveTab);
     }
   });
-
+  
   // Also listen for turbo:load events
   document.addEventListener('turbo:load', function() {
     console.log('Turbo load event');
@@ -83,5 +89,12 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Using stored active tab on load:', currentActiveTab);
     updateActiveTab(currentActiveTab);
   });
-});
+}
+
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', initializeNavigation);
+
+// Also initialize on turbo events
+document.addEventListener('turbo:load', initializeNavigation);
+document.addEventListener('turbo:render', initializeNavigation);
 </script>

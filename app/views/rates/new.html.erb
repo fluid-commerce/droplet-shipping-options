@@ -110,8 +110,7 @@ if (window.rateCountriesInitialized) {
            // Check if Choices is already initialized on these elements
            if (countrySelect._choicesjs || regionSelect._choicesjs) {
              console.log('Choices already initialized, skipping...');
-             return;
-           }
+           } else {
 
            // Load countries data first, then initialize Choices
            fetch('https://restcountries.com/v3.1/all?fields=name,cca2')
@@ -248,6 +247,7 @@ if (window.rateCountriesInitialized) {
 
         console.log('Fallback Choices initialized');
       });
+           } // Close the else block
   } else {
     console.error('Country or region select elements not found!');
   }
