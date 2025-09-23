@@ -3,7 +3,7 @@ class ShippingOptionsController < ApplicationController
 
   before_action :store_dri_in_session, only: [ :index ]
   before_action :find_company_by_dri
-  before_action :find_shipping_option, only: %i[edit update disable]
+  before_action :find_shipping_option, only: %i[edit update destroy disable]
 
   def index
     @shipping_options = @company.shipping_options.active
@@ -16,43 +16,37 @@ class ShippingOptionsController < ApplicationController
     @shipping_options = @company.shipping_options.all
   end
 
-  def create
-    @new_shipping_option = @company.shipping_options.build(shipping_option_params)
+  def new
+    @shipping_option = @company.shipping_options.build
+  end
 
-    if @new_shipping_option.save
-      if request.xhr?
-        render json: { success: true, message: "Shipping method was successfully created." }
-      else
-        redirect_to shipping_methods_shipping_options_path, notice: "Shipping method was successfully created."
-      end
+  def edit
+    @shipping_option = @company.shipping_options.find(params[:id])
+    Rails.logger.info "Edit shipping option: #{@shipping_option.inspect}"
+    Rails.logger.info "Countries: #{@shipping_option.countries.inspect}"
+  end
+
+  def create
+    @shipping_option = @company.shipping_options.build(shipping_option_params)
+
+    if @shipping_option.save
+      redirect_to shipping_methods_shipping_options_path, notice: "Shipping method was successfully created."
     else
-      if request.xhr?
-        render json: { success: false, errors: @new_shipping_option.errors.full_messages }
-      else
-        @shipping_options = @company.shipping_options.active
-        render :shipping_methods
-      end
+      render :new, status: :unprocessable_entity
     end
   end
 
-  def edit; end
-
   def update
     if @shipping_option.update(shipping_option_params)
-      if request.xhr?
-        render json: { success: true, message: "Shipping method was successfully updated." }
-      else
-        redirect_to shipping_methods_shipping_options_path, notice: "Shipping method was successfully updated."
-      end
+      redirect_to shipping_methods_shipping_options_path, notice: "Shipping method was successfully updated."
     else
-      if request.xhr?
-        render json: { success: false, errors: @shipping_option.errors.full_messages }
-      else
-        @shipping_options = @company.shipping_options.active
-        @new_shipping_option = @company.shipping_options.build
-        render :shipping_methods, status: :unprocessable_entity
-      end
+      render :edit, status: :unprocessable_entity
     end
+  end
+
+  def destroy
+    @shipping_option.destroy
+    redirect_to shipping_methods_shipping_options_path, notice: "Shipping method was successfully deleted."
   end
 
   def disable

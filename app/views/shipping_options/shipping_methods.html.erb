@@ -1,13 +1,5 @@
 <% content_for :title, "Extended Shipping Options - Shipping Methods" %>
 
-<div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-  <div class="max-w-7xl mx-auto px-6 py-8">
-    <%= render 'shared/shipping_options_header' %>
-    <%= render 'shared/shipping_options_navigation' %>
-    <%= turbo_frame_tag "shipping_content" do %>
-      <%= render 'shipping_methods' %>
-    <% end %>
-  </div>
-</div>
-
-<%= render 'shipping_methods_modals' %>
+<%= turbo_frame_tag "shipping_content" do %>
+  <%= render 'shipping_methods' %>
+<% end %>

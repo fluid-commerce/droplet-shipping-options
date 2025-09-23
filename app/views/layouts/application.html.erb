@@ -21,7 +21,14 @@
   </head>
 
   <body>
-    <%= yield %>
+    <div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div class="max-w-7xl mx-auto px-6 py-8">
+        <%= render "shared/shipping_options_header" %>
+        <%= render "shared/shipping_options_navigation" %>
+
+        <%= yield %>
+      </div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
   </body>
 </html>

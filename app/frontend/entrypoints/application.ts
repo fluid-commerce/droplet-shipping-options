@@ -1,6 +1,5 @@
 import "../fontawesome"  // Import FontAwesome here instead of CSS
 import "@hotwired/turbo-rails"
-import "./modals"
 
 interface AppConfig {
   environment: string;

@@ -21,7 +21,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :shipping_options, only: %i[ index create edit update ] do
+  resources :shipping_options, only: %i[ index new create edit update destroy ] do
     member do
       patch :disable
     end

@@ -30,6 +30,6 @@ module DropletTemplate
       key: "_droplet_shipping_options_session",
       secure: Rails.env.production?,
       httponly: true,
-      same_site: :none
+      same_site: Rails.env.production? ? :none : :lax
   end
 end

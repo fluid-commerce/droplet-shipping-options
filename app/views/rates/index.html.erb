@@ -1,11 +1,5 @@
 <% content_for :title, @shipping_option ? "Rate Tables - #{@shipping_option.name}" : "Rate Tables Overview" %>
 
-<div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-  <div class="max-w-7xl mx-auto px-6 py-8">
-    <%= render 'shared/shipping_options_header' %>
-    <%= render 'shared/shipping_options_navigation' %>
-    <%= turbo_frame_tag "shipping_content" do %>
-      <%= render 'rate_tables' %>
-    <% end %>
-  </div>
-</div>
+<%= turbo_frame_tag "shipping_content" do %>
+  <%= render 'rate_tables' %>
+<% end %>

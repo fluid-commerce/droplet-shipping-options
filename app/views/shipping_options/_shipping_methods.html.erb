@@ -4,9 +4,10 @@
       <h2 class="text-2xl font-bold text-gray-900 mb-2">Shipping Methods</h2>
       <p class="text-gray-600">Manage and configure your shipping methods</p>
     </div>
-    <button id="addMethodBtn" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+    <%= link_to new_shipping_option_path, class: "inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105", data: { turbo_frame: "_top" } do %>
+      <i class="fa-solid fa-plus mr-2"></i>
       Add Method
-    </button>
+    <% end %>
   </div>
 
   <div class="overflow-x-auto">
@@ -44,20 +45,18 @@
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button class="edit-method-btn text-blue-600 hover:text-blue-900 mr-3" 
-                        data-shipping-option-id="<%= shipping_option.id %>"
-                        data-shipping-option-name="<%= shipping_option.name %>"
-                        data-shipping-option-delivery-time="<%= shipping_option.delivery_time %>"
-                        data-shipping-option-starting-rate="<%= shipping_option.starting_rate %>"
-                        data-shipping-option-countries="<%= shipping_option.countries&.join(', ') %>"
-                        data-shipping-option-status="<%= shipping_option.status %>">
+                <%= link_to edit_shipping_option_path(shipping_option), class: "text-blue-600 hover:text-blue-900 mr-3", data: { turbo_frame: "_top" } do %>
                   Edit
-                </button>
-                <button class="disable-method-btn text-red-600 hover:text-red-900" 
-                        data-shipping-option-id="<%= shipping_option.id %>"
-                        data-shipping-option-name="<%= shipping_option.name %>">
+                <% end %>
+                <%= link_to shipping_option_path(shipping_option), method: :delete,
+                    class: "text-red-600 hover:text-red-900",
+                    data: {
+                      turbo_method: :delete,
+                      turbo_confirm: "Are you sure you want to disable \"#{shipping_option.name}\"? This action cannot be undone.",
+                      turbo_frame: "_top"
+                    } do %>
                   Disable
-                </button>
+                <% end %>
               </td>
             </tr>
           <% end %>
@@ -71,9 +70,9 @@
         <h3 class="mt-2 text-sm font-medium text-gray-900">No shipping methods</h3>
         <p class="mt-1 text-sm text-gray-500">Get started by creating a new shipping method.</p>
         <div class="mt-6">
-          <button id="addMethodBtnEmpty" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+          <%= link_to new_shipping_option_path, class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700", data: { turbo_frame: "_top" } do %>
             Add Method
-          </button>
+          <% end %>
         </div>
       </div>
     <% end %>

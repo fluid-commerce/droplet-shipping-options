@@ -34,6 +34,8 @@
 document.addEventListener('DOMContentLoaded', function() {
   // Function to update active tab
   function updateActiveTab(activeTab) {
+    console.log('Updating active tab to:', activeTab);
+
     // Remove active class from all tabs
     document.querySelectorAll('.nav-tab').forEach(tab => {
       tab.classList.remove('bg-blue-50', 'text-blue-700', 'border', 'border-blue-200');
@@ -45,31 +47,41 @@ document.addEventListener('DOMContentLoaded', function() {
     if (activeTabElement) {
       activeTabElement.classList.remove('text-gray-600', 'hover:text-gray-900', 'hover:bg-gray-50');
       activeTabElement.classList.add('bg-blue-50', 'text-blue-700', 'border', 'border-blue-200');
+      console.log('Tab updated successfully:', activeTab);
+    } else {
+      console.log('Tab element not found:', activeTab);
     }
   }
   
+  // Store the currently active tab
+  let currentActiveTab = 'overview'; // Default to overview
+
   // Add click listeners to tabs
   document.querySelectorAll('.nav-tab').forEach(tab => {
     tab.addEventListener('click', function(e) {
       const tabName = this.getAttribute('data-tab');
+      console.log('Tab clicked:', tabName);
+      currentActiveTab = tabName; // Store the clicked tab
       updateActiveTab(tabName);
     });
   });
   
   // Listen for turbo frame loads to update active state
   document.addEventListener('turbo:frame-load', function(e) {
+    console.log('Turbo frame loaded:', e.target.id);
     if (e.target.id === 'shipping_content') {
-      // Determine which tab should be active based on the loaded content
-      const frameContent = e.target.innerHTML;
-      
-      if (frameContent.includes('Shipping Methods') && frameContent.includes('Add Method')) {
-        updateActiveTab('shipping_methods');
-      } else if (frameContent.includes('Rate Tables') && frameContent.includes('Add Rate Table')) {
-        updateActiveTab('rate_tables');
-      } else if (frameContent.includes('Extended Shipping Options') && frameContent.includes('Overview')) {
-        updateActiveTab('overview');
-      }
+      // Use the stored active tab instead of trying to detect from URL
+      console.log('Using stored active tab:', currentActiveTab);
+      updateActiveTab(currentActiveTab);
     }
+  });
+
+  // Also listen for turbo:load events
+  document.addEventListener('turbo:load', function() {
+    console.log('Turbo load event');
+    // Use the stored active tab
+    console.log('Using stored active tab on load:', currentActiveTab);
+    updateActiveTab(currentActiveTab);
   });
 });
 </script>

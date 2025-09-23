@@ -1,108 +1,255 @@
-<% content_for :title, "New Rate Table - #{@shipping_option.name}" %>
-
-<div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-  <div class="bg-white border-b border-gray-100 px-6 py-4">
-    <div class="max-w-7xl mx-auto">
-      <div class="flex items-center text-sm text-gray-500">
-        <%= link_to root_path, class: "hover:text-blue-600 transition-colors duration-200" do %>
-          Dashboard
-        <% end %>
-        <i class="fa-solid fa-chevron-right mx-3 text-gray-300"></i>
-        <%= link_to shipping_options_path, class: "hover:text-blue-600 transition-colors duration-200" do %>
-          Extended Shipping Options
-        <% end %>
-        <i class="fa-solid fa-chevron-right mx-3 text-gray-300"></i>
-        <%= link_to shipping_options_path, class: "hover:text-blue-600 transition-colors duration-200" do %>
-          Extended Shipping Options
-        <% end %>
-        <i class="fa-solid fa-chevron-right mx-3 text-gray-300"></i>
-        <%= link_to rate_tables_path, class: "hover:text-blue-600 transition-colors duration-200" do %>
-          <%= @shipping_option.name %>
-        <% end %>
-        <i class="fa-solid fa-chevron-right mx-3 text-gray-300"></i>
-        <span class="text-blue-600 font-medium">New Rate</span>
-      </div>
-    </div>
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Create New Rate Table</h1>
+    <p class="text-gray-600">Configure pricing for a specific shipping method and region.</p>
   </div>
 
-  <div class="max-w-4xl mx-auto px-6 py-8">
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-      <div class="flex items-center justify-between mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900 mb-2">New Rate Table</h1>
-          <p class="text-gray-600">Add a new pricing rule for <strong><%= @shipping_option.name %></strong></p>
-        </div>
-        <%= link_to rate_tables_path, class: "inline-flex items-center px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors duration-200" do %>
-          <i class="fa-solid fa-arrow-left mr-2"></i>
-          Back to Rate Tables
-        <% end %>
-      </div>
-
-      <%= form_with model: @rate, url: rate_tables_path, local: true, class: "space-y-6" do |form| %>
-        <%= form.hidden_field :shipping_option_id, value: @shipping_option.id %>
-        
-        <% if @rate.errors.any? %>
-          <div class="bg-red-50 border border-red-200 rounded-xl p-4">
-            <div class="flex">
-              <div class="flex-shrink-0">
-                <i class="fa-solid fa-exclamation-triangle text-red-400"></i>
-              </div>
-              <div class="ml-3">
-                <h3 class="text-sm font-medium text-red-800">
-                  <%= pluralize(@rate.errors.count, "error") %> prohibited this rate from being saved:
-                </h3>
-                <div class="mt-2 text-sm text-red-700">
-                  <ul class="list-disc list-inside space-y-1">
-                    <% @rate.errors.full_messages.each do |message| %>
-                      <li><%= message %></li>
-                    <% end %>
-                  </ul>
-                </div>
-              </div>
+  <%= form_with model: @rate, url: rate_tables_path, local: true, class: "space-y-6" do |form| %>
+    <% if @rate.errors.any? %>
+      <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <i class="fa-solid fa-exclamation-triangle text-red-400"></i>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">
+              <%= pluralize(@rate.errors.count, "error") %> prohibited this rate table from being saved:
+            </h3>
+            <div class="mt-2 text-sm text-red-700">
+              <ul class="list-disc list-inside space-y-1">
+                <% @rate.errors.full_messages.each do |message| %>
+                  <li><%= message %></li>
+                <% end %>
+              </ul>
             </div>
           </div>
-        <% end %>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          <div>
-            <%= form.label :country, class: "block text-sm font-medium text-gray-700 mb-2" %>
-            <%= form.text_field :country, class: "w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200", placeholder: "e.g., US, CA, MX", maxlength: 2 %>
-          </div>
-
-          <div>
-            <%= form.label :region, class: "block text-sm font-medium text-gray-700 mb-2" %>
-            <%= form.text_field :region, class: "w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200", placeholder: "e.g., CA, NY, ON (optional)" %>
-          </div>
-
-          <div>
-            <%= form.label :min_range_lbs, "Minimum Weight (lbs)", class: "block text-sm font-medium text-gray-700 mb-2" %>
-            <%= form.number_field :min_range_lbs, step: 0.1, class: "w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200", placeholder: "0.1" %>
-          </div>
-
-          <div>
-            <%= form.label :max_range_lbs, "Maximum Weight (lbs)", class: "block text-sm font-medium text-gray-700 mb-2" %>
-            <%= form.number_field :max_range_lbs, step: 0.1, class: "w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200", placeholder: "5.0" %>
-          </div>
-
-          <div>
-            <%= form.label :flat_rate, "Flat Rate ($)", class: "block text-sm font-medium text-gray-700 mb-2" %>
-            <%= form.number_field :flat_rate, step: 0.01, class: "w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200", placeholder: "20.00" %>
-          </div>
-
-          <div>
-            <%= form.label :min_charge, "Minimum Charge ($)", class: "block text-sm font-medium text-gray-700 mb-2" %>
-            <%= form.number_field :min_charge, step: 0.01, class: "w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200", placeholder: "10.00" %>
-          </div>
         </div>
+      </div>
+    <% end %>
 
-        <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-          <%= link_to rate_tables_path, class: "inline-flex items-center px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors duration-200" do %>
-            Cancel
-          <% end %>
-          <%= form.submit "Create Rate Table", class: "inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105" %>
-        </div>
-      <% end %>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <%= form.label :shipping_option_id, "Shipping Method", class: "block text-sm font-medium text-gray-700 mb-2" %>
+        <%= form.select :shipping_option_id, 
+            options_from_collection_for_select(@shipping_methods, :last, :first, @rate.shipping_option_id),
+            { prompt: "Select a shipping method" },
+            { class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", required: true } %>
+      </div>
+
+      <div>
+        <%= form.label :country, "Country", class: "block text-sm font-medium text-gray-700 mb-2" %>
+        <%= form.select :country, 
+            [],
+            { prompt: "Select a country..." },
+            { id: "rateCountry", class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", required: true } %>
+      </div>
+
+      <div>
+        <%= form.label :region, "Region", class: "block text-sm font-medium text-gray-700 mb-2" %>
+        <%= form.select :region, 
+            [],
+            { prompt: "Select a region..." },
+            { id: "rateRegion", class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" } %>
+      </div>
+
+      <div>
+        <%= form.label :min_range_lbs, "Minimum Weight (lbs)", class: "block text-sm font-medium text-gray-700 mb-2" %>
+        <%= form.number_field :min_range_lbs, 
+            class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+            step: 0.01, min: 0, placeholder: "0.00" %>
+      </div>
+
+      <div>
+        <%= form.label :max_range_lbs, "Maximum Weight (lbs)", class: "block text-sm font-medium text-gray-700 mb-2" %>
+        <%= form.number_field :max_range_lbs, 
+            class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+            step: 0.01, min: 0, placeholder: "0.00" %>
+      </div>
+
+      <div>
+        <%= form.label :flat_rate, "Flat Rate ($)", class: "block text-sm font-medium text-gray-700 mb-2" %>
+        <%= form.number_field :flat_rate, 
+            class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+            step: 0.01, min: 0, placeholder: "0.00" %>
+      </div>
+
+      <div>
+        <%= form.label :min_charge, "Minimum Charge ($)", class: "block text-sm font-medium text-gray-700 mb-2" %>
+        <%= form.number_field :min_charge, 
+            class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+            step: 0.01, min: 0, placeholder: "0.00" %>
+      </div>
     </div>
-  </div>
+
+    <div class="flex justify-end space-x-4 pt-6">
+      <%= link_to "Cancel", rate_tables_path, class: "px-6 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200", data: { turbo_frame: "_top" } %>
+      <%= form.submit "Create Rate Table", class: "px-6 py-3 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-200" %>
+    </div>
+  <% end %>
 </div>
+
+<script>
+// Reset initialization flag when entering new page
+window.rateCountriesInitialized = false;
+
+// Check if already initialized to prevent multiple executions
+if (window.rateCountriesInitialized) {
+  console.log('Rate countries already initialized, skipping...');
+} else {
+  window.rateCountriesInitialized = true;
+
+  console.log('Rate new page script starting...');
+
+  // Initialize countries dropdown
+  const countrySelect = document.getElementById('rateCountry');
+  const regionSelect = document.getElementById('rateRegion');
+
+         if (countrySelect && regionSelect) {
+           console.log('Elements found, loading countries...');
+
+           // Check if Choices is already initialized on these elements
+           if (countrySelect._choicesjs || regionSelect._choicesjs) {
+             console.log('Choices already initialized, skipping...');
+             return;
+           }
+
+           // Load countries data first, then initialize Choices
+           fetch('https://restcountries.com/v3.1/all?fields=name,cca2')
+             .then(response => response.json())
+             .then(countries => {
+               console.log('Countries loaded from API:', countries.length);
+
+               const countryOptions = countries.map(country => ({
+                 value: country.cca2,
+                 label: `${country.name.common} (${country.cca2})`
+               })).sort((a, b) => a.label.localeCompare(b.label));
+
+               console.log('Initializing Choices with', countryOptions.length, 'countries');
+
+               // Initialize Choices for countries
+               const countryChoices = new Choices('#rateCountry', {
+                 searchEnabled: true,
+                 placeholder: true,
+                 placeholderValue: 'Select a country...',
+                 searchPlaceholderValue: 'Search countries...',
+                 noResultsText: 'No countries found',
+                 noChoicesText: 'No countries available',
+                 itemSelectText: 'Press to select',
+                 shouldSort: false,
+                 choices: countryOptions
+               });
+
+        // Initialize Choices for regions
+        const regionChoices = new Choices('#rateRegion', {
+          searchEnabled: true,
+          placeholder: true,
+          placeholderValue: 'Select a region...',
+          searchPlaceholderValue: 'Search regions...',
+          noResultsText: 'No regions found',
+          noChoicesText: 'No regions available',
+          itemSelectText: 'Press to select',
+          shouldSort: false,
+          removeItemButton: true
+        });
+
+        console.log('Choices initialized');
+
+        // Load regions when country changes
+        countryChoices.passedElement.element.addEventListener('change', function(event) {
+          const selectedCountry = event.target.value;
+          console.log('Country selected:', selectedCountry);
+          if (selectedCountry) {
+            loadRegionsForCountry(selectedCountry, regionChoices);
+          }
+        });
+
+        // Function to load regions for a country
+        function loadRegionsForCountry(countryCode, regionChoicesInstance) {
+          if (!countryCode || !regionChoicesInstance) {
+            console.error('Invalid parameters for loadRegionsForCountry');
+            return;
+          }
+
+          console.log('Loading regions for country:', countryCode);
+
+          // Get regions from hardcoded data
+          const regions = getFallbackRegions(countryCode);
+          console.log('Using regions for', countryCode, ':', regions);
+
+          const regionOptions = regions.map(region => ({
+            value: region,
+            label: region
+          }));
+
+          // Clear existing choices and set new ones
+          regionChoicesInstance.clearChoices();
+          regionChoicesInstance.setChoices(regionOptions, 'value', 'label', true);
+
+          console.log('Regions loaded successfully for', countryCode, ':', regions);
+        }
+
+        // Fallback function with hardcoded regions for major countries
+        function getFallbackRegions(countryCode) {
+          const fallbackData = {
+            'US': ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'],
+            'AR': ['Buenos Aires', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'],
+            'CA': ['Alberta', 'British Columbia', 'Manitoba', 'New Brunswick', 'Newfoundland and Labrador', 'Northwest Territories', 'Nova Scotia', 'Nunavut', 'Ontario', 'Prince Edward Island', 'Quebec', 'Saskatchewan', 'Yukon'],
+            'MX': ['Aguascalientes', 'Baja California', 'Baja California Sur', 'Campeche', 'Chiapas', 'Chihuahua', 'Coahuila', 'Colima', 'Durango', 'Guanajuato', 'Guerrero', 'Hidalgo', 'Jalisco', 'México', 'Michoacán', 'Morelos', 'Nayarit', 'Nuevo León', 'Oaxaca', 'Puebla', 'Querétaro', 'Quintana Roo', 'San Luis Potosí', 'Sinaloa', 'Sonora', 'Tabasco', 'Tamaulipas', 'Tlaxcala', 'Veracruz', 'Yucatán', 'Zacatecas'],
+            'BR': ['Acre', 'Alagoas', 'Amapá', 'Amazonas', 'Bahia', 'Ceará', 'Distrito Federal', 'Espírito Santo', 'Goiás', 'Maranhão', 'Mato Grosso', 'Mato Grosso do Sul', 'Minas Gerais', 'Pará', 'Paraíba', 'Paraná', 'Pernambuco', 'Piauí', 'Rio de Janeiro', 'Rio Grande do Norte', 'Rio Grande do Sul', 'Rondônia', 'Roraima', 'Santa Catarina', 'São Paulo', 'Sergipe', 'Tocantins']
+          };
+
+          return fallbackData[countryCode] || ['No regions available'];
+        }
+      })
+      .catch(error => {
+        console.error('Error loading countries:', error);
+
+        // Fallback countries
+        const fallbackCountries = [
+          { value: 'US', label: 'United States (US)' },
+          { value: 'CA', label: 'Canada (CA)' },
+          { value: 'MX', label: 'Mexico (MX)' },
+          { value: 'GB', label: 'United Kingdom (GB)' },
+          { value: 'AU', label: 'Australia (AU)' },
+          { value: 'DE', label: 'Germany (DE)' },
+          { value: 'FR', label: 'France (FR)' },
+          { value: 'IT', label: 'Italy (IT)' },
+          { value: 'ES', label: 'Spain (ES)' },
+          { value: 'BR', label: 'Brazil (BR)' },
+          { value: 'AR', label: 'Argentina (AR)' }
+        ];
+
+        console.log('Using fallback countries:', fallbackCountries.length);
+
+        // Initialize Choices with fallback countries
+        const countryChoices = new Choices('#rateCountry', {
+          searchEnabled: true,
+          placeholder: true,
+          placeholderValue: 'Select a country...',
+          searchPlaceholderValue: 'Search countries...',
+          noResultsText: 'No countries found',
+          noChoicesText: 'No countries available',
+          itemSelectText: 'Press to select',
+          shouldSort: false,
+          choices: fallbackCountries
+        });
+
+        const regionChoices = new Choices('#rateRegion', {
+          searchEnabled: true,
+          placeholder: true,
+          placeholderValue: 'Select a region...',
+          searchPlaceholderValue: 'Search regions...',
+          noResultsText: 'No regions found',
+          noChoicesText: 'No regions available',
+          itemSelectText: 'Press to select',
+          shouldSort: false,
+          removeItemButton: true
+        });
+
+        console.log('Fallback Choices initialized');
+      });
+  } else {
+    console.error('Country or region select elements not found!');
+  }
+}
+</script>
