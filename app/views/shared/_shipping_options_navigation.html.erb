@@ -32,12 +32,9 @@
 <script>
 // Handle tab navigation and active states
 function initializeNavigation() {
-  console.log('Initializing navigation...');
   
   // Function to update active tab
   function updateActiveTab(activeTab) {
-    console.log('Updating active tab to:', activeTab);
-    
     // Remove active class from all tabs
     document.querySelectorAll('.nav-tab').forEach(tab => {
       tab.classList.remove('bg-blue-50', 'text-blue-700', 'border', 'border-blue-200');
@@ -49,10 +46,15 @@ function initializeNavigation() {
     if (activeTabElement) {
       activeTabElement.classList.remove('text-gray-600', 'hover:text-gray-900', 'hover:bg-gray-50');
       activeTabElement.classList.add('bg-blue-50', 'text-blue-700', 'border', 'border-blue-200');
-      console.log('Tab updated successfully:', activeTab);
-    } else {
-      console.log('Tab element not found:', activeTab);
     }
+  }
+
+  function clearAllActiveTabs() {
+    // Remove active class from all tabs
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.classList.remove('bg-blue-50', 'text-blue-700', 'border', 'border-blue-200');
+      tab.classList.add('text-gray-600', 'hover:text-gray-900', 'hover:bg-gray-50');
+    });
   }
   
   // Store the currently active tab
@@ -67,27 +69,74 @@ function initializeNavigation() {
   
   function handleTabClick(e) {
     const tabName = this.getAttribute('data-tab');
-    console.log('Tab clicked:', tabName);
     currentActiveTab = tabName; // Store the clicked tab
     updateActiveTab(tabName);
   }
   
+  // Function to determine active tab based on current content
+  function determineActiveTabFromContent() {
+    const currentPath = window.location.pathname;
+    
+    // Check if we're on new/edit pages
+    if (currentPath.includes('/new') || currentPath.includes('/edit')) {
+      return null; // Don't mark any tab as active on new/edit pages
+    }
+    
+    // Check the content of the shipping_content frame
+    const shippingContent = document.getElementById('shipping_content');
+    if (shippingContent) {
+      const contentText = shippingContent.textContent || shippingContent.innerText;
+      
+      // More specific detection based on actual content - check Overview first
+      if (contentText.includes('Shipping Overview') || contentText.includes('Monitor your shipping') || contentText.includes('Active Methods') || contentText.includes('Configured Regions')) {
+        return 'overview';
+      } else if (contentText.includes('Rate Tables') || contentText.includes('rate table') || contentText.includes('Add Rate Table')) {
+        return 'rate_tables';
+      } else if (contentText.includes('Shipping Methods') || contentText.includes('shipping method') || contentText.includes('Add Method') || contentText.includes('Express shipping') || contentText.includes('Normal Shipping')) {
+        return 'shipping_methods';
+      }
+    }
+    
+    // Fallback to URL-based detection
+    if (currentPath.includes('/rates') || currentPath.includes('/rate_tables')) {
+      return 'rate_tables';
+    } else if (currentPath.includes('/shipping_options')) {
+      return 'shipping_methods';
+    } else {
+      return 'overview';
+    }
+  }
+
   // Listen for turbo frame loads to update active state
   document.addEventListener('turbo:frame-load', function(e) {
-    console.log('Turbo frame loaded:', e.target.id);
     if (e.target.id === 'shipping_content') {
-      // Use the stored active tab instead of trying to detect from URL
-      console.log('Using stored active tab:', currentActiveTab);
-      updateActiveTab(currentActiveTab);
+      // Add a small delay to ensure content is fully loaded
+      setTimeout(() => {
+        const activeTab = determineActiveTabFromContent();
+        
+        if (activeTab === null) {
+          clearAllActiveTabs();
+        } else {
+          currentActiveTab = activeTab; // Update stored tab
+          updateActiveTab(activeTab);
+        }
+      }, 100);
     }
   });
   
   // Also listen for turbo:load events
   document.addEventListener('turbo:load', function() {
-    console.log('Turbo load event');
-    // Use the stored active tab
-    console.log('Using stored active tab on load:', currentActiveTab);
-    updateActiveTab(currentActiveTab);
+    // Add a small delay to ensure content is fully loaded
+    setTimeout(() => {
+      const activeTab = determineActiveTabFromContent();
+      
+      if (activeTab === null) {
+        clearAllActiveTabs();
+      } else {
+        currentActiveTab = activeTab; // Update stored tab
+        updateActiveTab(activeTab);
+      }
+    }, 100);
   });
 }
 

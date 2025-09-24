@@ -1,0 +1,179 @@
+<% content_for :title, "Extended Shipping Options" %>
+
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Create New Shipping Method</h1>
+    <p class="text-gray-600">Add a new shipping method to your options</p>
+  </div>
+
+  <%= form_with model: [@shipping_option], local: true, class: "space-y-6" do |form| %>
+    <% if @shipping_option.errors.any? %>
+      <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <i class="fa-solid fa-exclamation-triangle text-red-400"></i>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">
+              <%= pluralize(@shipping_option.errors.count, "error") %> prohibited this shipping method from being saved:
+            </h3>
+            <div class="mt-2 text-sm text-red-700">
+              <ul class="list-disc list-inside space-y-1">
+                <% @shipping_option.errors.full_messages.each do |message| %>
+                  <li><%= message %></li>
+                <% end %>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <div>
+      <%= form.label :name, "Method Name", class: "block text-sm font-medium text-gray-700 mb-2" %>
+      <%= form.text_field :name, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", placeholder: "e.g., Express Shipping" %>
+    </div>
+
+    <div>
+      <%= form.label :delivery_time, "Delivery Time (days)", class: "block text-sm font-medium text-gray-700 mb-2" %>
+      <%= form.number_field :delivery_time, min: 1, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", placeholder: "e.g., 2" %>
+    </div>
+
+    <div>
+      <%= form.label :starting_rate, "Starting Rate ($)", class: "block text-sm font-medium text-gray-700 mb-2" %>
+      <%= form.number_field :starting_rate, min: 0, step: 0.01, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", placeholder: "e.g., 15.99" %>
+    </div>
+
+             <div>
+               <%= form.label :countries, "Countries", class: "block text-sm font-medium text-gray-700 mb-2" %>
+               <%= form.select :countries, [], {}, { multiple: true, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", id: "shippingMethodCountriesNew" } %>
+               <p class="text-sm text-gray-500 mt-1">Select one or more countries</p>
+             </div>
+
+    <div>
+      <%= form.label :status, "Status", class: "block text-sm font-medium text-gray-700 mb-2" %>
+      <%= form.select :status, options_for_select([['Active', 'active'], ['Inactive', 'inactive'], ['Draft', 'draft']], 'active'), {}, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" %>
+    </div>
+
+    <div class="flex justify-end space-x-4 pt-6">
+      <%= link_to "Cancel", shipping_methods_shipping_options_path, class: "px-6 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200", data: { turbo_frame: "_top" } %>
+      <%= form.submit "Create Method", class: "px-6 py-3 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-200" %>
+    </div>
+  <% end %>
+</div>
+
+<script>
+
+// Function to initialize the form
+function initializeShippingNewForm() {
+  
+  // Check if already initialized
+  if (window.shippingNewFormInitialized) {
+    return;
+  }
+  
+  // Initialize countries dropdown
+  const countriesSelect = document.getElementById('shippingMethodCountriesNew');
+  if (countriesSelect) {
+    
+    // Destroy any existing Choices.js instances
+    if (countriesSelect._choicesjs) {
+      countriesSelect._choicesjs.destroy();
+      countriesSelect._choicesjs = null;
+    }
+    
+    // Also check for any global Choices instances
+    if (window.Choices && window.Choices.instances) {
+      window.Choices.instances.forEach(instance => {
+        if (instance.passedElement.element === countriesSelect) {
+          instance.destroy();
+        }
+      });
+    }
+    
+    // Load countries data first, then initialize Choices
+    fetch('https://restcountries.com/v3.1/all?fields=name,cca2')
+      .then(response => response.json())
+      .then(countries => {
+        
+        const countryOptions = countries.map(country => ({
+          value: country.cca2,
+          label: `${country.name.common} (${country.cca2})`
+        })).sort((a, b) => a.label.localeCompare(b.label));
+
+
+        // Initialize Choices for countries with options
+        const countryChoices = new Choices('#shippingMethodCountriesNew', {
+          searchEnabled: true,
+          placeholder: true,
+          placeholderValue: 'Select countries...',
+          searchPlaceholderValue: 'Search countries...',
+          noResultsText: 'No countries found',
+          noChoicesText: 'No countries available',
+          itemSelectText: 'Press to select',
+          shouldSort: false,
+          removeItemButton: true,
+          choices: countryOptions
+        });
+        
+      })
+      .catch(error => {
+        console.error('Error loading countries:', error);
+        
+        // Fallback countries
+        const fallbackCountries = [
+          { value: 'US', label: 'United States (US)' },
+          { value: 'CA', label: 'Canada (CA)' },
+          { value: 'MX', label: 'Mexico (MX)' },
+          { value: 'GB', label: 'United Kingdom (GB)' },
+          { value: 'AU', label: 'Australia (AU)' },
+          { value: 'DE', label: 'Germany (DE)' },
+          { value: 'FR', label: 'France (FR)' },
+          { value: 'IT', label: 'Italy (IT)' },
+          { value: 'ES', label: 'Spain (ES)' },
+          { value: 'BR', label: 'Brazil (BR)' },
+          { value: 'AR', label: 'Argentina (AR)' }
+        ];
+        
+        
+        // Initialize Choices for countries with fallback options
+        const countryChoices = new Choices('#shippingMethodCountriesNew', {
+          searchEnabled: true,
+          placeholder: true,
+          placeholderValue: 'Select countries...',
+          searchPlaceholderValue: 'Search countries...',
+          noResultsText: 'No countries found',
+          noChoicesText: 'No countries available',
+          itemSelectText: 'Press to select',
+          shouldSort: false,
+          removeItemButton: true,
+          choices: fallbackCountries
+        });
+      });
+  } else {
+    console.error('Countries select element not found!');
+  }
+
+  // Mark as initialized
+  window.shippingNewFormInitialized = true;
+}
+
+// Wait for DOM to be ready and add a delay to prevent auto-initialization conflicts
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(initializeShippingNewForm, 500);
+});
+
+// Also listen for Turbo events
+document.addEventListener('turbo:load', function() {
+  // Reset initialization flag for new page loads
+  window.shippingNewFormInitialized = false;
+  setTimeout(initializeShippingNewForm, 500);
+});
+
+document.addEventListener('turbo:render', function() {
+  // Reset initialization flag for new page renders
+  window.shippingNewFormInitialized = false;
+  setTimeout(initializeShippingNewForm, 500);
+});
+
+</script>

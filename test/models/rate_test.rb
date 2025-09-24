@@ -22,10 +22,11 @@ class RateTest < ActiveSupport::TestCase
       assert_includes @rate.errors[:country], "is the wrong length (should be 2 characters)"
     end
 
-    test "region should not exceed 10 characters" do
-      @rate.region = "A" * 11
+
+    test "region should be present" do
+      @rate.region = nil
       assert_not @rate.valid?
-      assert_includes @rate.errors[:region], "is too long (maximum is 10 characters)"
+      assert_includes @rate.errors[:region], "can't be blank"
     end
 
     test "min_range_lbs should be present" do
@@ -94,12 +95,12 @@ class RateTest < ActiveSupport::TestCase
 
   describe "instance methods" do
     test "weight_range should return formatted weight range" do
-      assert_equal "0.1 - 5.0 lbs", @rate.weight_range
+      assert_equal "0.0 - 5.0 lbs", @rate.weight_range
     end
   end
 
   describe "uniqueness validation" do
-    test "should not allow duplicate rates for same shipping option and location" do
+    test "should not allow overlapping weight ranges for same shipping option and location" do
       duplicate_rate = Rate.new(
         shipping_option: @rate.shipping_option,
         country: @rate.country,
@@ -111,7 +112,7 @@ class RateTest < ActiveSupport::TestCase
       )
 
       assert_not duplicate_rate.valid?
-      assert_includes duplicate_rate.errors[:base], "Rate already exists for this shipping option and location"
+      assert duplicate_rate.errors[:base].any? { |error| error.include?("Weight range overlaps with existing rate") }
     end
 
     test "should allow same shipping option for different locations" do
@@ -119,7 +120,7 @@ class RateTest < ActiveSupport::TestCase
         shipping_option: @rate.shipping_option,
         country: "CA",
         region: "ON",
-        min_range_lbs: 0.1,
+        min_range_lbs: 0, # First rate must start at 0
         max_range_lbs: 5.0,
         flat_rate: 20.00,
         min_charge: 10.00

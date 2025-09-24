@@ -57,15 +57,14 @@
                     } do %>
                   Disable
                 <% end %>
-                <%= link_to shipping_option_path(shipping_option), method: :delete,
-                    class: "text-red-600 hover:text-red-900",
-                    data: {
-                      turbo_method: :delete,
-                      turbo_confirm: "Are you sure you want to DELETE \"#{shipping_option.name}\"? This action cannot be undone and will permanently remove this shipping method.",
-                      turbo_frame: "_top"
-                    } do %>
+                <a href="#" 
+                   class="text-red-600 hover:text-red-900 delete-shipping-btn"
+                   data-shipping-option-id="<%= shipping_option.id %>"
+                   data-shipping-option-name="<%= shipping_option.name %>"
+                   data-delete-url="<%= shipping_option_path(shipping_option) %>"
+                   data-turbo-frame="_top">
                   Delete
-                <% end %>
+                </a>
               </td>
             </tr>
           <% end %>
@@ -87,4 +86,50 @@
     <% end %>
   </div>
 </div>
+
+<script>
+// Global event delegation for delete buttons - only add once
+if (!window.deleteListenersAdded) {
+  window.deleteListenersAdded = true;
+  
+  // Handle delete shipping option functionality
+  document.addEventListener('click', function(event) {
+    if (event.target.classList.contains('delete-shipping-btn')) {
+      event.preventDefault();
+
+      const shippingOptionId = event.target.dataset.shippingOptionId;
+      const shippingOptionName = event.target.dataset.shippingOptionName;
+      const deleteUrl = event.target.dataset.deleteUrl;
+
+      const confirmMessage = `Are you sure you want to DELETE "${shippingOptionName}"? This action cannot be undone and will permanently remove this shipping method.`;
+      
+      if (confirm(confirmMessage)) {
+        deleteShippingOption(deleteUrl);
+      }
+    }
+  });
+
+  function deleteShippingOption(deleteUrl) {
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = deleteUrl;
+
+    const methodField = document.createElement('input');
+    methodField.type = 'hidden';
+    methodField.name = '_method';
+    methodField.value = 'delete';
+    form.appendChild(methodField);
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfField = document.createElement('input');
+    csrfField.type = 'hidden';
+    csrfField.name = 'authenticity_token';
+    csrfField.value = csrfToken;
+    form.appendChild(csrfField);
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+</script>
 

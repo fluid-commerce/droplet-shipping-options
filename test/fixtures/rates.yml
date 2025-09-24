@@ -4,7 +4,7 @@ one:
   shipping_option: standard_shipping
   country: "US"
   region: "CA"
-  min_range_lbs: 0.1
+  min_range_lbs: 0
   max_range_lbs: 5.0
   flat_rate: 20.00
   min_charge: 10.00
@@ -13,7 +13,7 @@ two:
   shipping_option: standard_shipping
   country: "US"
   region: "NY"
-  min_range_lbs: 0.1
+  min_range_lbs: 0
   max_range_lbs: 3.0
   flat_rate: 35.00
   min_charge: 25.00
@@ -22,7 +22,7 @@ three:
   shipping_option: express_shipping
   country: "CA"
   region: "ON"
-  min_range_lbs: 0.1
+  min_range_lbs: 0
   max_range_lbs: 10.0
   flat_rate: 25.00
   min_charge: 15.00
@@ -31,7 +31,7 @@ four:
   shipping_option: standard_shipping
   country: "US"
   region: "TX"
-  min_range_lbs: 0.1
+  min_range_lbs: 0
   max_range_lbs: 2.0
   flat_rate: 50.00
   min_charge: 40.00
@@ -40,7 +40,7 @@ five:
   shipping_option: express_shipping
   country: "CA"
   region: "BC"
-  min_range_lbs: 0.1
+  min_range_lbs: 0
   max_range_lbs: 5.0
   flat_rate: 30.00
   min_charge: 20.00

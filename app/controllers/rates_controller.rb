@@ -45,6 +45,7 @@ class RatesController < ApplicationController
     if @rate.update(rate_params)
       redirect_to rate_tables_path, notice: "Rate was successfully updated."
     else
+      @shipping_methods = @company.shipping_options.pluck(:id, :name).map { |id, name| [ "#{name}", id ] }
       render :edit, status: :unprocessable_entity
     end
   end

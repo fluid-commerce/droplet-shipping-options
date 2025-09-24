@@ -27,7 +27,7 @@ class ShippingCalculationService
     shipping_options = find_available_shipping_options
 
     if shipping_options.empty?
-      return failure_result("No shipping options available for this location")
+      return default_shipping_result
     end
 
     success_result(shipping_options)
@@ -46,6 +46,13 @@ private
     {
       success: true,
       shipping_options: shipping_options.map { |option| serialize_shipping_option(option) },
+    }
+  end
+
+  def default_shipping_result
+    {
+      success: true,
+      shipping_options: [ default_shipping_response ],
     }
   end
 
@@ -68,15 +75,9 @@ private
   end
 
   def find_best_rate(shipping_option)
-    state_rate = shipping_option.rates.find do |rate|
+    shipping_option.rates.find do |rate|
       rate.country_code == ship_to_country && rate.state_code == ship_to_state
     end
-
-    country_rate = shipping_option.rates.find do |rate|
-      rate.country_code == ship_to_country && rate.state_code.blank?
-    end
-
-    state_rate || country_rate
   end
 
   def calculate_shipping_total(shipping_option, rate)
@@ -96,5 +97,13 @@ private
     else
       "#{delivery_time} days"
     end
+  end
+
+  def default_shipping_response
+    {
+      shipping_total: 0,
+      shipping_title: "Coordinate with the shop",
+      shipping_delivery_time_estimate: 0,
+    }
   end
 end

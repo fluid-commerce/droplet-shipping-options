@@ -61,7 +61,7 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
     assert_equal "Invalid parameters", result[:error]
   end
 
-  test "should return failure when no shipping options available" do
+  test "should return default shipping response when no shipping options available" do
     # Crear un servicio con un país que no tiene shipping options
     service = ShippingCalculationService.new(
       company: @company,
@@ -72,8 +72,10 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
 
     result = service.call
 
-    assert_not result[:success]
-    assert_equal "No shipping options available for this location", result[:error]
+    assert result[:success]
+    assert_equal 1, result[:shipping_options].length
+    assert_equal "Coordinate with the shop", result[:shipping_options].first[:shipping_title]
+    assert_equal 0, result[:shipping_options].first[:shipping_total]
   end
 
   test "should calculate shipping total correctly with rate" do

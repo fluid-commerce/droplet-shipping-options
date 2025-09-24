@@ -41,7 +41,7 @@
         <%= form.select :country, 
             [],
             { prompt: "Select a country..." },
-            { id: "rateCountry", class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent", required: true } %>
+            { id: "rateCountryNew", class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" } %>
       </div>
 
       <div>
@@ -49,7 +49,7 @@
         <%= form.select :region, 
             [],
             { prompt: "Select a region..." },
-            { id: "rateRegion", class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" } %>
+            { id: "rateRegionNew", class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" } %>
       </div>
 
       <div>
@@ -89,44 +89,56 @@
 </div>
 
 <script>
-// Reset initialization flag when entering new page
-window.rateCountriesInitialized = false;
 
-// Check if already initialized to prevent multiple executions
-if (window.rateCountriesInitialized) {
-  console.log('Rate countries already initialized, skipping...');
-} else {
-  window.rateCountriesInitialized = true;
-
-  console.log('Rate new page script starting...');
+// Function to initialize the form
+function initializeRateNewForm() {
+  // Check if already initialized
+  if (window.rateNewFormInitialized) {
+    return;
+  }
 
   // Initialize countries dropdown
-  const countrySelect = document.getElementById('rateCountry');
-  const regionSelect = document.getElementById('rateRegion');
+  const countrySelect = document.getElementById('rateCountryNew');
+  const regionSelect = document.getElementById('rateRegionNew');
 
-         if (countrySelect && regionSelect) {
-           console.log('Elements found, loading countries...');
+  if (countrySelect && regionSelect) {
 
-           // Check if Choices is already initialized on these elements
-           if (countrySelect._choicesjs || regionSelect._choicesjs) {
-             console.log('Choices already initialized, skipping...');
-           } else {
+           // Destroy any existing Choices.js instances
+           if (countrySelect._choicesjs) {
+             countrySelect._choicesjs.destroy();
+             countrySelect._choicesjs = null;
+           }
+
+           if (regionSelect._choicesjs) {
+             regionSelect._choicesjs.destroy();
+             regionSelect._choicesjs = null;
+           }
+
+           // Also check for any global Choices instances
+           if (window.Choices && window.Choices.instances) {
+             window.Choices.instances.forEach(instance => {
+               if (instance.passedElement.element === countrySelect || instance.passedElement.element === regionSelect) {
+                 instance.destroy();
+               }
+             });
+           }
+
+           // Wait a bit to ensure destruction is complete
+           setTimeout(() => {
 
            // Load countries data first, then initialize Choices
            fetch('https://restcountries.com/v3.1/all?fields=name,cca2')
              .then(response => response.json())
              .then(countries => {
-               console.log('Countries loaded from API:', countries.length);
 
                const countryOptions = countries.map(country => ({
                  value: country.cca2,
                  label: `${country.name.common} (${country.cca2})`
                })).sort((a, b) => a.label.localeCompare(b.label));
 
-               console.log('Initializing Choices with', countryOptions.length, 'countries');
 
                // Initialize Choices for countries
-               const countryChoices = new Choices('#rateCountry', {
+               const countryChoices = new Choices('#rateCountryNew', {
                  searchEnabled: true,
                  placeholder: true,
                  placeholderValue: 'Select a country...',
@@ -139,7 +151,7 @@ if (window.rateCountriesInitialized) {
                });
 
         // Initialize Choices for regions
-        const regionChoices = new Choices('#rateRegion', {
+        const regionChoices = new Choices('#rateRegionNew', {
           searchEnabled: true,
           placeholder: true,
           placeholderValue: 'Select a region...',
@@ -151,12 +163,10 @@ if (window.rateCountriesInitialized) {
           removeItemButton: true
         });
 
-        console.log('Choices initialized');
 
         // Load regions when country changes
         countryChoices.passedElement.element.addEventListener('change', function(event) {
           const selectedCountry = event.target.value;
-          console.log('Country selected:', selectedCountry);
           if (selectedCountry) {
             loadRegionsForCountry(selectedCountry, regionChoices);
           }
@@ -169,22 +179,19 @@ if (window.rateCountriesInitialized) {
             return;
           }
 
-          console.log('Loading regions for country:', countryCode);
 
           // Get regions from hardcoded data
           const regions = getFallbackRegions(countryCode);
-          console.log('Using regions for', countryCode, ':', regions);
 
           const regionOptions = regions.map(region => ({
             value: region,
             label: region
           }));
 
-          // Clear existing choices and set new ones
+          // Clear existing choices and set new ones (don't select first by default)
           regionChoicesInstance.clearChoices();
-          regionChoicesInstance.setChoices(regionOptions, 'value', 'label', true);
+          regionChoicesInstance.setChoices(regionOptions, 'value', 'label', false);
 
-          console.log('Regions loaded successfully for', countryCode, ':', regions);
         }
 
         // Fallback function with hardcoded regions for major countries
@@ -218,10 +225,9 @@ if (window.rateCountriesInitialized) {
           { value: 'AR', label: 'Argentina (AR)' }
         ];
 
-        console.log('Using fallback countries:', fallbackCountries.length);
 
         // Initialize Choices with fallback countries
-        const countryChoices = new Choices('#rateCountry', {
+        const countryChoices = new Choices('#rateCountryNew', {
           searchEnabled: true,
           placeholder: true,
           placeholderValue: 'Select a country...',
@@ -233,7 +239,7 @@ if (window.rateCountriesInitialized) {
           choices: fallbackCountries
         });
 
-        const regionChoices = new Choices('#rateRegion', {
+        const regionChoices = new Choices('#rateRegionNew', {
           searchEnabled: true,
           placeholder: true,
           placeholderValue: 'Select a region...',
@@ -245,11 +251,32 @@ if (window.rateCountriesInitialized) {
           removeItemButton: true
         });
 
-        console.log('Fallback Choices initialized');
       });
-           } // Close the else block
+           }, 100); // Close setTimeout
   } else {
     console.error('Country or region select elements not found!');
   }
+  
+  // Mark as initialized
+  window.rateNewFormInitialized = true;
 }
+
+// Wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(initializeRateNewForm, 500);
+});
+
+// Also listen for Turbo events
+document.addEventListener('turbo:load', function() {
+  // Reset initialization flag for new page loads
+  window.rateNewFormInitialized = false;
+  setTimeout(initializeRateNewForm, 500);
+});
+
+document.addEventListener('turbo:render', function() {
+  // Reset initialization flag for new page renders
+  window.rateNewFormInitialized = false;
+  setTimeout(initializeRateNewForm, 500);
+});
+
 </script>
