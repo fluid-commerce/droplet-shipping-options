@@ -62,10 +62,9 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
   end
 
   test "should return default shipping response when no shipping options available" do
-    # Crear un servicio con un país que no tiene shipping options
     service = ShippingCalculationService.new(
       company: @company,
-      ship_to_country: "XX", # País inexistente
+      ship_to_country: "XX",
       ship_to_state: "YY",
       items: []
     )
@@ -79,7 +78,6 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
   end
 
   test "should calculate shipping total correctly with rate" do
-    # Crear un rate específico
     rate = @shipping_option.rates.create!(
       country: "US",
       region: "CA",
@@ -99,7 +97,6 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
     result = @service.call
 
     assert result[:success]
-    # El fixture express_shipping tiene starting_rate de 15.99
     assert_equal 15.99, result[:shipping_options].first[:shipping_total]
   end
 
@@ -109,7 +106,6 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
     assert result[:success]
     shipping_option = result[:shipping_options].first
 
-    # El fixture express_shipping tiene delivery_time de 2
     assert_equal "2 days", shipping_option[:shipping_delivery_time_estimate]
   end
 end
