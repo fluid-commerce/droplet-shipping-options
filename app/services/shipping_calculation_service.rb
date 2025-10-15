@@ -33,6 +33,26 @@ class ShippingCalculationService
     success_result(shipping_options)
   end
 
+  def calculate_total_weight
+    return 0.0 if items.blank?
+
+    total_weight_in_lb = 0.0
+
+    items.each do |item|
+      next unless item[:variant] && item[:variant][:weight] && item[:quantity]
+
+      weight = item[:variant][:weight].to_f
+      quantity = item[:quantity].to_i
+      unit_of_weight = item[:variant][:unit_of_weight]&.downcase
+
+      weight_in_lb = convert_to_pounds(weight, unit_of_weight)
+
+      total_weight_in_lb += (weight_in_lb * quantity)
+    end
+
+    total_weight_in_lb.round(2)
+  end
+
 private
 
   def find_available_shipping_options
@@ -75,9 +95,7 @@ private
   end
 
   def find_best_rate(shipping_option)
-    shipping_option.rates.find do |rate|
-      rate.country_code == ship_to_country && rate.state_code == ship_to_state
-    end
+    shipping_option.rates.find { |rate| rate_matches_location?(rate) && rate_matches_weight_range?(rate) }
   end
 
   def calculate_shipping_total(shipping_option, rate)
@@ -105,5 +123,29 @@ private
       shipping_title: "Coordinate with the shop",
       shipping_delivery_time_estimate: 0,
     }
+  end
+
+private
+
+  def rate_matches_location?(rate)
+    rate.country_code == ship_to_country && rate.state_code == ship_to_state
+  end
+
+  def rate_matches_weight_range?(rate)
+    total_weight = calculate_total_weight
+    total_weight >= rate.min_range_lbs && total_weight <= rate.max_range_lbs
+  end
+
+  def convert_to_pounds(weight, unit)
+    case unit
+    when "kg", "kgs", "kilogram", "kilograms"
+      weight * 2.20462
+    when "g", "gram", "grams"
+      weight * 0.00220462
+    when "oz", "ounce", "ounces"
+      weight * 0.0625
+    else
+      weight
+    end
   end
 end
