@@ -231,4 +231,3 @@ class ShippingCalculationServiceCountryLevelTest < ActiveSupport::TestCase
     assert_not service.send(:rate_matches_country_only?, region_rate)
   end
 end
-
