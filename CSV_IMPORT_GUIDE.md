@@ -21,7 +21,7 @@ Your CSV file **must** include these columns (order doesn't matter):
 |--------|------|-------------|---------|
 | `shipping_method` | String | Name of existing shipping method | Express Shipping |
 | `country` | String (2 chars) | ISO 2-letter country code | US, CA, MX |
-| `region` | String | State/province **code** (not full name) | CA, NY, ON, BC |
+| `region` | String (optional) | State/province **code** (leave blank for country-level rates) | CA, NY, ON, BC or blank |
 | `min_range_lbs` | Decimal | Minimum weight in pounds | 0, 5.5, 10 |
 | `max_range_lbs` | Decimal | Maximum weight in pounds | 5, 10.5, 25 |
 | `flat_rate` | Decimal | Shipping cost in dollars | 9.99, 15.50 |
@@ -29,7 +29,8 @@ Your CSV file **must** include these columns (order doesn't matter):
 
 ### Important Notes
 
-- **Region codes, not names**: Use `CA` (not California), `NY` (not New York), `ON` (not Ontario)
+- **Region is optional**: Leave region blank for country-level rates, or specify region codes for region-specific pricing
+- **Region codes, not names**: When specified, use codes like `CA` (not California), `NY` (not New York), `ON` (not Ontario)
 - **Country codes**: Must be exactly 2 characters (US, CA, MX, GB, etc.)
 - **First rate must start at 0**: For each unique shipping_method + country + region combination, the first rate must have `min_range_lbs = 0`
 - **No overlapping ranges**: Weight ranges cannot overlap for the same location and shipping method
@@ -48,7 +49,11 @@ Standard Shipping,US,CA,0,10,5.99,3.00
 Standard Shipping,US,CA,10,25,9.99,5.00
 Standard Shipping,CA,ON,0,10,15.99,10.00
 Standard Shipping,CA,BC,0,10,18.99,12.00
+Economy Shipping,US,,0,25,4.99,2.00
+Economy Shipping,CA,,0,25,6.99,3.00
 ```
+
+**Note**: The last two rows show country-level rates (region column is blank).
 
 ## Common Region Codes
 

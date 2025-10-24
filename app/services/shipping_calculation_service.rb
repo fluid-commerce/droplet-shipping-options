@@ -95,7 +95,16 @@ private
   end
 
   def find_best_rate(shipping_option)
-    shipping_option.rates.find { |rate| rate_matches_location?(rate) && rate_matches_weight_range?(rate) }
+    # First try to find region-specific rate
+    region_rate = shipping_option.rates.find do |rate|
+      rate_matches_location_exact?(rate) && rate_matches_weight_range?(rate)
+    end
+    return region_rate if region_rate
+
+    # Fall back to country-level rate if no region-specific rate found
+    shipping_option.rates.find do |rate|
+      rate_matches_country_only?(rate) && rate_matches_weight_range?(rate)
+    end
   end
 
   def calculate_shipping_total(shipping_option, rate)
@@ -127,8 +136,14 @@ private
 
 private
 
-  def rate_matches_location?(rate)
-    rate.country_code == ship_to_country && rate.state_code == ship_to_state
+  def rate_matches_location_exact?(rate)
+    rate.country_code == ship_to_country &&
+      rate.state_code.present? &&
+      rate.state_code == ship_to_state
+  end
+
+  def rate_matches_country_only?(rate)
+    rate.country_code == ship_to_country && rate.state_code.blank?
   end
 
   def rate_matches_weight_range?(rate)
