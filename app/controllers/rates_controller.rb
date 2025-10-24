@@ -1,8 +1,8 @@
 class RatesController < ApplicationController
+  include DriAuthentication
+
   layout "application"
 
-  before_action :store_dri_in_session
-  before_action :find_company_by_dri
   before_action :find_shipping_option, only: %i[create]
   before_action :find_rate, only: %i[edit update destroy]
 
@@ -89,30 +89,6 @@ class RatesController < ApplicationController
   end
 
 private
-
-  def store_dri_in_session
-    dri = params[:dri]
-
-    if dri.present?
-      session[:dri] = dri
-    elsif session[:dri].blank?
-      render json: { error: "DRI parameter is required" }, status: :bad_request
-    end
-  end
-
-  def find_company_by_dri
-    dri = session[:dri]
-
-    unless dri.present?
-      render json: { error: "DRI parameter is required" }, status: :bad_request
-    end
-
-    @company = Company.find_by(droplet_installation_uuid: dri)
-
-    unless @company
-      render json: { error: "Company not found with DRI: #{dri}" }, status: :not_found
-    end
-  end
 
   def find_shipping_option
     shipping_option_id = params[:shipping_option_id] || params.dig(:rate, :shipping_option_id)

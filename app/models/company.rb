@@ -8,8 +8,20 @@ class Company < ApplicationRecord
   validates :authentication_token, uniqueness: true
 
   scope :active, -> { where(active: true) }
+  scope :installed, -> { where(uninstalled_at: nil) }
+  scope :uninstalled, -> { where.not(uninstalled_at: nil) }
 
   after_initialize :set_default_installed_callback_ids, if: :new_record?
+
+  # Check if the company's droplet installation is currently active and installed
+  def installed?
+    uninstalled_at.nil? && active?
+  end
+
+  # Check if the company's droplet has been uninstalled
+  def uninstalled?
+    uninstalled_at.present?
+  end
 
 private
 
@@ -17,3 +29,4 @@ private
     self.installed_callback_ids ||= []
   end
 end
+
