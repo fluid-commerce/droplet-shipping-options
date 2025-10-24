@@ -43,10 +43,16 @@ private
   def valid_file_type?
     return false unless file.respond_to?(:path) || file.respond_to?(:read)
 
+    # Check file extension first if available
+    if file.respond_to?(:original_filename) && file.original_filename.present?
+      return false unless File.extname(file.original_filename).downcase == ".csv"
+    elsif file.respond_to?(:path)
+      return false unless File.extname(file.path).downcase == ".csv"
+    end
+
+    # Then check content type if available
     if file.respond_to?(:content_type)
       file.content_type.in?([ "text/csv", "text/plain", "application/vnd.ms-excel" ])
-    elsif file.respond_to?(:path)
-      File.extname(file.path).downcase == ".csv"
     else
       true
     end
@@ -141,7 +147,7 @@ private
       success: true,
       message: "Imported #{@success_count} rate(s) with #{row_errors.count} error(s)",
       imported_count: @success_count,
-      errors: row_errors,
+      row_errors: row_errors,
     }
   end
 
