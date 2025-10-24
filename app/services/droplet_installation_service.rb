@@ -86,11 +86,11 @@ private
       )
     end
   rescue => e
-    # Log error but don't fail the installation
+    # Log error and fail the installation so we know something went wrong
     Rails.logger.error(
       "[DropletInstallationService] Failed to register callback: #{e.message}"
     )
     Rails.logger.error(e.backtrace.join("\n"))
-    raise e  # Re-raise so installation fails if callback fails
+    raise e
   end
 end
