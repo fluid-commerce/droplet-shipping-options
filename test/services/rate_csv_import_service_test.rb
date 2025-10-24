@@ -138,10 +138,11 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
     assert_includes result[:row_errors].first[:errors].join, "wrong length"
   end
 
-  test "should validate region is present" do
+  test "should allow blank region for country-level rates" do
     csv_content = <<~CSV
       shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
       Express Shipping,US,,0,5,9.99,5.00
+      Express Shipping,US,,5,10,14.99,10.00
     CSV
 
     file = create_csv_file(csv_content)
@@ -149,9 +150,12 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
 
     result = service.call
 
-    assert_not result[:success]
-    assert result[:row_errors].present?
-    assert_includes result[:row_errors].first[:errors].join, "can't be blank"
+    assert result[:success]
+    assert_equal 2, result[:imported_count]
+
+    rates = @shipping_option.rates.where(country: "US", region: [ nil, "" ]).order(:min_range_lbs)
+    assert_equal 2, rates.count
+    assert_nil rates.first.region
   end
 
   test "should validate min_range_lbs is greater than or equal to 0" do

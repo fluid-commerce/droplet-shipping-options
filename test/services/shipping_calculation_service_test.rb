@@ -353,7 +353,7 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
     assert_not service.send(:rate_matches_weight_range?, rate)
   end
 
-  # Tests for rate_matches_location? method
+  # Tests for rate_matches_location_exact? method
   test "should match rate when country and state match" do
     rate = @shipping_option.rates.create!(
       country: "US",
@@ -371,7 +371,7 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
       items: []
     )
 
-    assert service.send(:rate_matches_location?, rate)
+    assert service.send(:rate_matches_location_exact?, rate)
   end
 
   test "should not match rate when country does not match" do
@@ -391,7 +391,7 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
       items: []
     )
 
-    assert_not service.send(:rate_matches_location?, rate)
+    assert_not service.send(:rate_matches_location_exact?, rate)
   end
 
   test "should not match rate when state does not match" do
@@ -411,7 +411,7 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
       items: []
     )
 
-    assert_not service.send(:rate_matches_location?, rate)
+    assert_not service.send(:rate_matches_location_exact?, rate)
   end
 
   # Integration test for find_best_rate with weight filtering

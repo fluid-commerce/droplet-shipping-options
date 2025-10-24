@@ -97,9 +97,12 @@ private
     shipping_option = find_shipping_option(row[:shipping_method], row_number)
     return unless shipping_option
 
+    region_value = row[:region]&.strip
+    region_value = nil if region_value.blank?
+
     rate = shipping_option.rates.new(
       country: row[:country]&.strip&.upcase,
-      region: row[:region]&.strip,
+      region: region_value,
       min_range_lbs: row[:min_range_lbs],
       max_range_lbs: row[:max_range_lbs],
       flat_rate: row[:flat_rate],
