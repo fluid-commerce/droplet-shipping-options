@@ -4,16 +4,24 @@ class WebhooksController < ApplicationController
 
   def create
     event_type = "#{params[:resource]}.#{params[:event]}"
-    version = params[:version]
-
     payload = params.to_unsafe_h.deep_dup
 
-    if EventHandler.route(event_type, payload, version: version)
-      # A 202 Accepted indicates that we have accepted the webhook and queued
-      # the appropriate background job for processing.
+    result = case event_type
+    when "droplet.installed"
+      DropletInstallationService.new(payload).call
+    when "droplet.uninstalled"
+      DropletUninstallationService.new(payload).call
+    else
+      # Fall back to async job processing for other events
+      EventHandler.route(event_type, payload, version: params[:version])
+      { success: true }
+    end
+
+    if result[:success]
       head :accepted
     else
-      head :no_content
+      Rails.logger.error("[WebhooksController] Failed to process #{event_type}: #{result[:error]}")
+      render json: { error: result[:error] }, status: :unprocessable_entity
     end
   end
 
