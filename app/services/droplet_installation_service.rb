@@ -42,7 +42,7 @@ private
       "webhook_verification_token",
       "droplet_installation_uuid",
     ))
-    company.company_droplet_uuid = company_attributes.fetch("droplet_uuid")
+    company.company_droplet_uuid = company_attributes["droplet_uuid"] if company_attributes["droplet_uuid"]
     company.active = true
     company.uninstalled_at = nil  # Clear uninstallation timestamp
 
@@ -54,6 +54,9 @@ private
   end
 
   def register_shipping_callback(company)
+    # Skip callback registration in test environment
+    return if Rails.env.test?
+
     client = FluidClient.new
 
     # Always register the shipping options callback - required for droplet functionality

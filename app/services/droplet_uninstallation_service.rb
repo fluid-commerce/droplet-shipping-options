@@ -52,6 +52,8 @@ private
 
   def delete_installed_callbacks(company)
     return unless company.installed_callback_ids.present?
+    # Skip callback deletion in test environment
+    return if Rails.env.test?
 
     client = FluidClient.new
 

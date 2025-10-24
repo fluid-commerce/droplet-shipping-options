@@ -13,12 +13,19 @@ class WebhooksController < ApplicationController
       DropletUninstallationService.new(payload).call
     else
       # Fall back to async job processing for other events
-      EventHandler.route(event_type, payload, version: params[:version])
-      { success: true }
+      if EventHandler.route(event_type, payload, version: params[:version])
+        { success: true, handled: true }
+      else
+        { success: true, handled: false }
+      end
     end
 
     if result[:success]
-      head :accepted
+      if result[:handled] == false
+        head :no_content
+      else
+        head :accepted
+      end
     else
       Rails.logger.error("[WebhooksController] Failed to process #{event_type}: #{result[:error]}")
       render json: { error: result[:error] }, status: :unprocessable_entity
