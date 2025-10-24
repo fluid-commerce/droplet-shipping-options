@@ -10,11 +10,11 @@ class DropletUninstalledJob < WebhookEventJob
         "[DropletUninstalledJob] Uninstalling droplet for #{company.fluid_shop}. " \
         "DRI: #{company.droplet_installation_uuid}"
       )
-      
+
       delete_installed_callbacks(company)
 
       company.update(uninstalled_at: Time.current)
-      
+
       Rails.logger.info(
         "[DropletUninstalledJob] Note: Users with existing sessions using DRI #{company.droplet_installation_uuid} " \
         "will receive an error message on next request and need to reinstall the droplet."
