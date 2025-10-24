@@ -5,6 +5,11 @@ require_relative "../config/environment"
 require "rails/test_help"
 require "minitest/rails"
 
+# Build Vite assets for test environment if not already built
+unless File.exist?(Rails.root.join("public/vite-test/manifest.json"))
+  system("bin/vite build --mode test --emptyOutDir") if File.exist?("bin/vite")
+end
+
 module ActiveSupport
   class TestCase
     # Run tests in parallel with specified workers
