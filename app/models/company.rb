@@ -29,4 +29,3 @@ private
     self.installed_callback_ids ||= []
   end
 end
-

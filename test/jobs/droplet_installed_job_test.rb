@@ -188,8 +188,8 @@ describe DropletInstalledJob do
           "droplet_uuid" => company.company_droplet_uuid,
           "authentication_token" => company.authentication_token,
           "webhook_verification_token" => company.webhook_verification_token,
-          "droplet_installation_uuid" => "dri_new_installation_uuid"
-        }
+          "droplet_installation_uuid" => "dri_new_installation_uuid",
+        },
       }
 
       job = DropletInstalledJob.new
@@ -215,8 +215,8 @@ describe DropletInstalledJob do
           "droplet_uuid" => company.company_droplet_uuid,
           "authentication_token" => company.authentication_token,
           "webhook_verification_token" => company.webhook_verification_token,
-          "droplet_installation_uuid" => new_dri
-        }
+          "droplet_installation_uuid" => new_dri,
+        },
       }
 
       job = DropletInstalledJob.new
@@ -241,8 +241,8 @@ describe DropletInstalledJob do
           "droplet_uuid" => company.company_droplet_uuid,
           "authentication_token" => company.authentication_token,
           "webhook_verification_token" => company.webhook_verification_token,
-          "droplet_installation_uuid" => new_dri
-        }
+          "droplet_installation_uuid" => new_dri,
+        },
       }
 
       log_output = StringIO.new
@@ -261,4 +261,3 @@ describe DropletInstalledJob do
     end
   end
 end
-

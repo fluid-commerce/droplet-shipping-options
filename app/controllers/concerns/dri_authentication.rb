@@ -142,7 +142,7 @@ private
     error_response = {
       error: message,
       code: code,
-      action_required: action_required
+      action_required: action_required,
     }
 
     error_response[:details] = details if details.present?
@@ -152,4 +152,3 @@ private
     render json: error_response, status: :not_found
   end
 end
-

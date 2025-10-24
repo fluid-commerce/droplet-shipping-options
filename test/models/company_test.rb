@@ -119,4 +119,3 @@ describe Company do
     end
   end
 end
-
