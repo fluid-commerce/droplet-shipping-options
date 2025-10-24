@@ -52,9 +52,47 @@ private
 
   def register_active_callbacks
     client = FluidClient.new
-    active_callbacks = ::Callback.active
+    company = get_company
     installed_callback_ids = []
 
+    # Always register the shipping options callback - required for droplet functionality
+    base_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-106074092699.europe-west1.run.app")
+    required_callback = {
+      definition_name: "shipping_options",
+      url: "#{base_url}/callbacks/shipping_options",
+      timeout_in_seconds: 10,
+      active: true,
+    }
+
+    begin
+      Rails.logger.info(
+        "[DropletInstalledJob] Registering required callback: " \
+        "#{required_callback[:definition_name]} at #{required_callback[:url]}"
+      )
+
+      response = client.callback_registrations.create(required_callback)
+      if response && response["callback_registration"]["uuid"]
+        installed_callback_ids << response["callback_registration"]["uuid"]
+        Rails.logger.info(
+          "[DropletInstalledJob] Successfully registered callback with UUID: " \
+          "#{response['callback_registration']['uuid']}"
+        )
+      else
+        Rails.logger.warn(
+          "[DropletInstalledJob] Callback registered but no UUID returned for: " \
+          "#{required_callback[:definition_name]}"
+        )
+      end
+    rescue => e
+      Rails.logger.error(
+        "[DropletInstalledJob] Failed to register required callback " \
+        "#{required_callback[:definition_name]}: #{e.message}"
+      )
+      Rails.logger.error(e.backtrace.join("\n"))
+    end
+
+    # Also register any additional active callbacks from database (optional/future use)
+    active_callbacks = ::Callback.active
     active_callbacks.each do |callback|
       begin
         callback_attributes = {
@@ -80,8 +118,10 @@ private
     end
 
     if installed_callback_ids.any?
-      company = get_company
       company.update(installed_callback_ids: installed_callback_ids)
+      Rails.logger.info(
+        "[DropletInstalledJob] Updated company with #{installed_callback_ids.length} callback IDs"
+      )
     end
   end
 end
