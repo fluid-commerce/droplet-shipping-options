@@ -66,4 +66,57 @@ describe Company do
       end
     end
   end
+
+  describe "installation status methods" do
+    it "installed? returns true when uninstalled_at is nil and active is true" do
+      company = companies(:acme)
+      company.update(uninstalled_at: nil, active: true)
+      _(company.installed?).must_equal true
+    end
+
+    it "installed? returns false when uninstalled_at is present" do
+      company = companies(:acme)
+      company.update(uninstalled_at: Time.current, active: true)
+      _(company.installed?).must_equal false
+    end
+
+    it "installed? returns false when active is false" do
+      company = companies(:acme)
+      company.update(uninstalled_at: nil, active: false)
+      _(company.installed?).must_equal false
+    end
+
+    it "uninstalled? returns true when uninstalled_at is present" do
+      company = companies(:acme)
+      company.update(uninstalled_at: Time.current)
+      _(company.uninstalled?).must_equal true
+    end
+
+    it "uninstalled? returns false when uninstalled_at is nil" do
+      company = companies(:acme)
+      company.update(uninstalled_at: nil)
+      _(company.uninstalled?).must_equal false
+    end
+  end
+
+  describe "scopes" do
+    it "installed scope returns only companies without uninstalled_at" do
+      companies(:acme).update(uninstalled_at: nil)
+      companies(:globex).update(uninstalled_at: Time.current)
+
+      installed_companies = Company.installed
+      _(installed_companies).must_include companies(:acme)
+      _(installed_companies).wont_include companies(:globex)
+    end
+
+    it "uninstalled scope returns only companies with uninstalled_at" do
+      companies(:acme).update(uninstalled_at: nil)
+      companies(:globex).update(uninstalled_at: Time.current)
+
+      uninstalled_companies = Company.uninstalled
+      _(uninstalled_companies).wont_include companies(:acme)
+      _(uninstalled_companies).must_include companies(:globex)
+    end
+  end
 end
+

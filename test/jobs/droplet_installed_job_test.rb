@@ -172,4 +172,93 @@ describe DropletInstalledJob do
       _(company.installed_callback_ids).must_be_empty
     end
   end
+
+  describe "reinstallation handling" do
+    it "clears uninstalled_at when reinstalling a previously uninstalled droplet" do
+      company = companies(:acme)
+      company.update(uninstalled_at: Time.current)
+
+      payload = {
+        "resource" => "droplet",
+        "event" => "installed",
+        "company" => {
+          "fluid_shop" => company.fluid_shop,
+          "name" => company.name,
+          "fluid_company_id" => company.fluid_company_id,
+          "droplet_uuid" => company.company_droplet_uuid,
+          "authentication_token" => company.authentication_token,
+          "webhook_verification_token" => company.webhook_verification_token,
+          "droplet_installation_uuid" => "dri_new_installation_uuid"
+        }
+      }
+
+      job = DropletInstalledJob.new
+      job.perform(payload)
+
+      _(company.reload.uninstalled_at).must_be_nil
+      _(company.reload.active).must_equal true
+      _(company.reload.droplet_installation_uuid).must_equal "dri_new_installation_uuid"
+    end
+
+    it "updates droplet_installation_uuid when reinstalling" do
+      company = companies(:acme)
+      old_dri = company.droplet_installation_uuid
+      new_dri = "dri_brand_new_installation"
+
+      payload = {
+        "resource" => "droplet",
+        "event" => "installed",
+        "company" => {
+          "fluid_shop" => company.fluid_shop,
+          "name" => company.name,
+          "fluid_company_id" => company.fluid_company_id,
+          "droplet_uuid" => company.company_droplet_uuid,
+          "authentication_token" => company.authentication_token,
+          "webhook_verification_token" => company.webhook_verification_token,
+          "droplet_installation_uuid" => new_dri
+        }
+      }
+
+      job = DropletInstalledJob.new
+      job.perform(payload)
+
+      _(company.reload.droplet_installation_uuid).must_equal new_dri
+      _(company.reload.droplet_installation_uuid).wont_equal old_dri
+    end
+
+    it "logs reinstallation when DRI changes" do
+      company = companies(:acme)
+      old_dri = company.droplet_installation_uuid
+      new_dri = "dri_reinstalled_uuid"
+
+      payload = {
+        "resource" => "droplet",
+        "event" => "installed",
+        "company" => {
+          "fluid_shop" => company.fluid_shop,
+          "name" => company.name,
+          "fluid_company_id" => company.fluid_company_id,
+          "droplet_uuid" => company.company_droplet_uuid,
+          "authentication_token" => company.authentication_token,
+          "webhook_verification_token" => company.webhook_verification_token,
+          "droplet_installation_uuid" => new_dri
+        }
+      }
+
+      log_output = StringIO.new
+      original_logger = Rails.logger
+      Rails.logger = Logger.new(log_output)
+
+      job = DropletInstalledJob.new
+      job.perform(payload)
+
+      Rails.logger = original_logger
+
+      log_content = log_output.string
+      _(log_content).must_include "Reinstallation detected"
+      _(log_content).must_include old_dri
+      _(log_content).must_include new_dri
+    end
+  end
 end
+
