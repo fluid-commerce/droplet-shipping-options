@@ -137,9 +137,9 @@ private
 private
 
   def rate_matches_location_exact?(rate)
-    rate.country_code == ship_to_country && 
-    rate.state_code.present? && 
-    rate.state_code == ship_to_state
+    rate.country_code == ship_to_country &&
+      rate.state_code.present? &&
+      rate.state_code == ship_to_state
   end
 
   def rate_matches_country_only?(rate)
