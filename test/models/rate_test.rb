@@ -23,10 +23,9 @@ class RateTest < ActiveSupport::TestCase
     end
 
 
-    test "region should be present" do
+    test "region can be blank for country-level rates" do
       @rate.region = nil
-      assert_not @rate.valid?
-      assert_includes @rate.errors[:region], "can't be blank"
+      assert @rate.valid?
     end
 
     test "min_range_lbs should be present" do
