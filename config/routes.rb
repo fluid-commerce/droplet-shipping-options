@@ -30,5 +30,10 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :rates, except: [ :show ], as: :rate_tables
+  resources :rates, except: [ :show ], as: :rate_tables do
+    collection do
+      get :import
+      post :process_import
+    end
+  end
 end

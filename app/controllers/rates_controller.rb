@@ -10,6 +10,39 @@ class RatesController < ApplicationController
     @shipping_options = @company.shipping_options.includes(:rates)
   end
 
+  def import
+    # Show import form
+  end
+
+  def process_import
+    unless params[:csv_file].present?
+      redirect_to import_rate_tables_path, alert: "Please select a CSV file to upload."
+      return
+    end
+
+    service = RateCsvImportService.new(
+      company: @company,
+      file: params[:csv_file]
+    )
+
+    result = service.call
+
+    if result[:success]
+      if result[:row_errors].present?
+        flash[:warning] = result[:message]
+        flash[:errors] = result[:row_errors]
+      else
+        flash[:notice] = result[:message]
+      end
+      redirect_to rate_tables_path
+    else
+      flash.now[:alert] = result[:message]
+      flash.now[:errors] = result[:errors]
+      flash.now[:row_errors] = result[:row_errors]
+      render :import, status: :unprocessable_entity
+    end
+  end
+
   def new
     @rate = @company.rates.build
     @shipping_methods = @company.shipping_options.pluck(:id, :name).map { |id, name| [ "#{name}", id ] }

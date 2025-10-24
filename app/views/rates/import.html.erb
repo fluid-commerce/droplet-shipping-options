@@ -1,0 +1,163 @@
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 max-w-4xl mx-auto">
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Import Rate Tables from CSV</h1>
+    <p class="text-gray-600">Upload a CSV file to bulk import shipping rates for your methods.</p>
+  </div>
+
+  <% if flash[:alert] || flash[:errors] || flash[:row_errors] %>
+    <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <i class="fa-solid fa-exclamation-triangle text-red-400"></i>
+        </div>
+        <div class="ml-3 flex-1">
+          <% if flash[:alert] %>
+            <h3 class="text-sm font-medium text-red-800 mb-2">
+              <%= flash[:alert] %>
+            </h3>
+          <% end %>
+          
+          <% if flash[:errors].present? %>
+            <div class="mt-2 text-sm text-red-700">
+              <ul class="list-disc list-inside space-y-1">
+                <% flash[:errors].each do |error| %>
+                  <li><%= error %></li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+
+          <% if flash[:row_errors].present? %>
+            <div class="mt-3">
+              <h4 class="text-sm font-medium text-red-800 mb-2">Row Errors:</h4>
+              <div class="max-h-64 overflow-y-auto">
+                <% flash[:row_errors].each do |row_error| %>
+                  <div class="mb-2 p-2 bg-red-100 rounded">
+                    <strong>Row <%= row_error[:row] %>:</strong>
+                    <ul class="list-disc list-inside ml-4">
+                      <% row_error[:errors].each do |error| %>
+                        <li><%= error %></li>
+                      <% end %>
+                    </ul>
+                    <% if row_error[:data] %>
+                      <div class="text-xs mt-1 text-red-600">
+                        Data: <%= row_error[:data].inspect %>
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- CSV Format Instructions -->
+  <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+    <h3 class="text-lg font-semibold text-blue-900 mb-3 flex items-center">
+      <i class="fa-solid fa-info-circle mr-2"></i>
+      CSV Format Requirements
+    </h3>
+    <div class="text-sm text-blue-800 space-y-2">
+      <p>Your CSV file must include the following columns (in any order):</p>
+      <ul class="list-disc list-inside ml-4 space-y-1">
+        <li><strong>shipping_method</strong> - Name of an existing shipping method</li>
+        <li><strong>country</strong> - 2-letter country code (e.g., US, CA, MX)</li>
+        <li><strong>region</strong> - State/province code (e.g., CA, NY, ON, BC)</li>
+        <li><strong>min_range_lbs</strong> - Minimum weight in pounds (must start at 0 for each location)</li>
+        <li><strong>max_range_lbs</strong> - Maximum weight in pounds</li>
+        <li><strong>flat_rate</strong> - Shipping cost in dollars</li>
+        <li><strong>min_charge</strong> - Minimum charge in dollars</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Example CSV -->
+  <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+      <i class="fa-solid fa-file-csv mr-2"></i>
+      Example CSV Format
+    </h3>
+    <div class="bg-white p-4 rounded border border-gray-300 overflow-x-auto">
+      <pre class="text-xs font-mono text-gray-800">shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
+Express Shipping,US,CA,0,5,9.99,5.00
+Express Shipping,US,CA,5,10,14.99,10.00
+Express Shipping,US,NY,0,5,12.99,8.00
+Standard Shipping,CA,ON,0,10,15.99,10.00</pre>
+    </div>
+    <div class="mt-3">
+      <button onclick="downloadSampleCSV()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+        <i class="fa-solid fa-download mr-1"></i>
+        Download Sample CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Upload Form -->
+  <%= form_with url: process_import_rate_tables_path, multipart: true, local: true, class: "space-y-6" do |form| %>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">
+        Select CSV File
+      </label>
+      <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-xl hover:border-blue-400 transition-colors">
+        <div class="space-y-1 text-center">
+          <i class="fa-solid fa-cloud-arrow-up text-4xl text-gray-400 mb-3"></i>
+          <div class="flex text-sm text-gray-600">
+            <label for="csv_file" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
+              <span>Upload a file</span>
+              <%= file_field_tag :csv_file, accept: ".csv", class: "sr-only", id: "csv_file", required: true %>
+            </label>
+            <p class="pl-1">or drag and drop</p>
+          </div>
+          <p class="text-xs text-gray-500">CSV files only</p>
+        </div>
+      </div>
+      <div id="file-name" class="mt-2 text-sm text-gray-600"></div>
+    </div>
+
+    <div class="flex justify-end space-x-4 pt-6">
+      <%= link_to "Cancel", rate_tables_path, class: "px-6 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200", data: { turbo_frame: "_top" } %>
+      <%= form.submit "Import Rates", class: "px-6 py-3 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-200" %>
+    </div>
+  <% end %>
+</div>
+
+<script>
+// Show selected file name
+document.getElementById('csv_file').addEventListener('change', function(e) {
+  const fileName = e.target.files[0]?.name;
+  const fileNameDisplay = document.getElementById('file-name');
+  if (fileName) {
+    fileNameDisplay.textContent = 'Selected file: ' + fileName;
+    fileNameDisplay.classList.add('font-medium', 'text-blue-600');
+  }
+});
+
+// Download sample CSV
+function downloadSampleCSV() {
+  const csvContent = `shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
+Express Shipping,US,CA,0,5,9.99,5.00
+Express Shipping,US,CA,5,10,14.99,10.00
+Express Shipping,US,CA,10,25,24.99,15.00
+Express Shipping,US,NY,0,5,12.99,8.00
+Express Shipping,US,NY,5,10,17.99,12.00
+Standard Shipping,US,CA,0,10,5.99,3.00
+Standard Shipping,US,CA,10,25,9.99,5.00
+Standard Shipping,CA,ON,0,10,15.99,10.00
+Standard Shipping,CA,ON,10,25,22.99,15.00
+Standard Shipping,CA,BC,0,10,18.99,12.00`;
+
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.setAttribute('hidden', '');
+  a.setAttribute('href', url);
+  a.setAttribute('download', 'rate_import_sample.csv');
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+</script>
+
