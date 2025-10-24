@@ -319,4 +319,3 @@ private
     Rack::Test::UploadedFile.new(file.path, "text/csv", original_filename: "test.csv")
   end
 end
-

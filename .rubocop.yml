@@ -179,7 +179,7 @@ Metrics/PerceivedComplexity:
   Enabled: false
 Naming/BlockForwarding:
   Enabled: true
-Naming/PredicateName:
+Naming/PredicatePrefix:
   Enabled: false
 Naming/VariableNumber:
   Enabled: false
