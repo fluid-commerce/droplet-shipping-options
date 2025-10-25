@@ -57,6 +57,14 @@ private
     # Skip callback registration in test environment
     return if Rails.env.test?
 
+    # Use the installation token for proper droplet-level callback registration
+    installation_token = @payload.dig("company", "authentication_token")
+    unless installation_token
+      Rails.logger.error("[DropletInstallationService] No installation token found in payload")
+      return
+    end
+
+    # Create a client with the installation token instead of company token
     client = FluidClient.new
 
     # Always register the shipping callback - required for droplet functionality
@@ -73,17 +81,31 @@ private
       "#{callback[:definition_name]} at #{callback[:url]}"
     )
 
-    response = client.callback_registrations.create(callback)
-    if response && response["callback_registration"]["uuid"]
-      callback_uuid = response["callback_registration"]["uuid"]
-      company.update(installed_callback_ids: [ callback_uuid ])
-      Rails.logger.info(
-        "[DropletInstallationService] Successfully registered callback with UUID: #{callback_uuid}"
-      )
+    # Make the API call with the installation token
+    response = HTTParty.post(
+      "#{Setting.fluid_api.base_url}/api/callback/registrations",
+      headers: {
+        "Authorization" => "Bearer #{installation_token}",
+        "Content-Type" => "application/json",
+      },
+      body: { callback_registration: callback }.to_json
+    )
+
+    if response.code == 201 || response.code == 200
+      parsed = response.parsed_response
+      if parsed && parsed["callback_registration"]["uuid"]
+        callback_uuid = parsed["callback_registration"]["uuid"]
+        company.update(installed_callback_ids: [ callback_uuid ])
+        Rails.logger.info(
+          "[DropletInstallationService] Successfully registered callback with UUID: #{callback_uuid}"
+        )
+      else
+        Rails.logger.warn(
+          "[DropletInstallationService] Callback registered but no UUID returned"
+        )
+      end
     else
-      Rails.logger.warn(
-        "[DropletInstallationService] Callback registered but no UUID returned"
-      )
+      raise "Failed to register callback: #{response.code} - #{response.body}"
     end
   rescue => e
     # Log error and fail the installation so we know something went wrong
