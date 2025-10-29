@@ -154,7 +154,7 @@
             Showing <span class="font-medium"><%= @pagy.from %></span> to <span class="font-medium"><%= @pagy.to %></span> of <span class="font-medium"><%= @pagy.count %></span> results
           </div>
           <div class="pagy-nav">
-            <%== pagy_nav(@pagy, aria_label: 'Rate tables pagination', params: { shipping_method: params[:shipping_method], country: params[:country], region: params[:region], weight_min: params[:weight_min], weight_max: params[:weight_max] }.compact) %>
+            <%== pagy_nav(@pagy, aria_label: 'Rate tables pagination') %>
           </div>
         </div>
       <% else %>
