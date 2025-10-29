@@ -112,4 +112,121 @@ class ShippingOptionTest < ActiveSupport::TestCase
     @shipping_option.status = "active"
     assert @shipping_option.active?
   end
+
+  test "should allow duplicate names for different countries" do
+    # Create first shipping option with US and CA
+    first_option = ShippingOption.create!(
+      name: "Standard Shipping",
+      delivery_time: 5,
+      starting_rate: 9.99,
+      countries: %w[US CA],
+      status: "active",
+      company: @company
+    )
+
+    # Should be able to create another with same name but different countries
+    second_option = ShippingOption.new(
+      name: "Standard Shipping",
+      delivery_time: 5,
+      starting_rate: 9.99,
+      countries: %w[UK FR],
+      status: "active",
+      company: @company
+    )
+
+    assert second_option.valid?
+    assert second_option.save
+  end
+
+  test "should not allow duplicate names with same countries" do
+    # Create first shipping option
+    ShippingOption.create!(
+      name: "Express Shipping",
+      delivery_time: 2,
+      starting_rate: 19.99,
+      countries: %w[US CA],
+      status: "active",
+      company: @company
+    )
+
+    # Try to create another with same name and same countries
+    duplicate_option = ShippingOption.new(
+      name: "Express Shipping",
+      delivery_time: 3,
+      starting_rate: 29.99,
+      countries: %w[US CA],
+      status: "active",
+      company: @company
+    )
+
+    assert_not duplicate_option.valid?
+    assert_includes duplicate_option.errors[:name], "already exists for US, CA"
+  end
+
+  test "should not allow duplicate names with overlapping countries" do
+    # Create first shipping option with US and CA
+    ShippingOption.create!(
+      name: "Priority Shipping",
+      delivery_time: 3,
+      starting_rate: 14.99,
+      countries: %w[US CA],
+      status: "active",
+      company: @company
+    )
+
+    # Try to create another with same name and one overlapping country
+    overlapping_option = ShippingOption.new(
+      name: "Priority Shipping",
+      delivery_time: 4,
+      starting_rate: 24.99,
+      countries: %w[CA MX],
+      status: "active",
+      company: @company
+    )
+
+    assert_not overlapping_option.valid?
+    assert_includes overlapping_option.errors[:name], "already exists for CA"
+  end
+
+  test "should allow same name for different companies" do
+    other_company = companies(:globex)
+
+    # Create shipping option for first company
+    ShippingOption.create!(
+      name: "Ground Shipping",
+      delivery_time: 7,
+      starting_rate: 5.99,
+      countries: %w[US],
+      status: "active",
+      company: @company
+    )
+
+    # Should be able to create same name with same country for different company
+    other_option = ShippingOption.new(
+      name: "Ground Shipping",
+      delivery_time: 7,
+      starting_rate: 5.99,
+      countries: %w[US],
+      status: "active",
+      company: other_company
+    )
+
+    assert other_option.valid?
+  end
+
+  test "should allow updating shipping option without triggering validation error" do
+    option = ShippingOption.create!(
+      name: "Overnight Shipping",
+      delivery_time: 1,
+      starting_rate: 39.99,
+      countries: %w[US],
+      status: "active",
+      company: @company
+    )
+
+    # Should be able to update other fields
+    option.delivery_time = 2
+    assert option.valid?
+    assert option.save
+  end
 end
