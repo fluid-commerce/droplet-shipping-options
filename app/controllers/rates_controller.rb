@@ -8,6 +8,52 @@ class RatesController < ApplicationController
 
   def index
     @shipping_options = @company.shipping_options.includes(:rates)
+
+    # Build query for all rates
+    rates_query = Rate.joins(:shipping_option)
+                      .where(shipping_options: { company_id: @company.id })
+                      .includes(:shipping_option)
+                      .order(created_at: :desc)
+
+    # Apply filters
+    if params[:shipping_method].present?
+      rates_query = rates_query.where(shipping_option_id: params[:shipping_method])
+    end
+
+    if params[:country].present?
+      rates_query = rates_query.where(country: params[:country])
+    end
+
+    if params[:region].present?
+      rates_query = rates_query.where(region: params[:region])
+    end
+
+    if params[:weight_min].present?
+      rates_query = rates_query.where("min_range_lbs >= ?", params[:weight_min])
+    end
+
+    if params[:weight_max].present?
+      rates_query = rates_query.where("max_range_lbs <= ?", params[:weight_max])
+    end
+
+    # Paginate results
+    @pagy, @rates = pagy(rates_query, limit: 20)
+
+    # Get unique values for filter dropdowns
+    @countries = Rate.joins(:shipping_option)
+                     .where(shipping_options: { company_id: @company.id })
+                     .distinct
+                     .pluck(:country)
+                     .compact
+                     .sort
+
+    @regions = Rate.joins(:shipping_option)
+                   .where(shipping_options: { company_id: @company.id })
+                   .where.not(region: nil)
+                   .distinct
+                   .pluck(:region)
+                   .compact
+                   .sort
   end
 
   def import

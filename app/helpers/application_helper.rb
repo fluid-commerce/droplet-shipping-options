@@ -1,4 +1,6 @@
 module ApplicationHelper
+  include Pagy::Frontend
+
   def format_settings_values(values)
     return "" if values.blank?
 
