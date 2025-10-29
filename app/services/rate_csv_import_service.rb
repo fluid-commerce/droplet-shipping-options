@@ -136,7 +136,7 @@ private
 
       shipping_methods_data[method_name] ||= {
         countries: Set.new,
-        min_price: Float::INFINITY
+        min_price: Float::INFINITY,
       }
 
       # Collect countries
