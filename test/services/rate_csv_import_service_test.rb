@@ -128,7 +128,7 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
     assert_not_nil new_method
     assert_equal 5, new_method.delivery_time
     assert_equal 9.99, new_method.starting_rate
-    assert_equal %w[US CA], new_method.countries.sort
+    assert_equal %w[CA US], new_method.countries.sort
     assert_equal "active", new_method.status
     assert_equal initial_count + 1, @company.shipping_options.count
   end
