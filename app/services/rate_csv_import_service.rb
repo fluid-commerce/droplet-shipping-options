@@ -79,6 +79,9 @@ private
   end
 
   def import_rates(csv_data)
+    # Pre-scan CSV to create missing shipping options
+    ensure_shipping_options_exist(csv_data)
+
     csv_data.each_with_index do |row, index|
       row_number = index + 2 # +2 because index is 0-based and we skip header row
 
@@ -118,6 +121,48 @@ private
         data: row.to_h,
         errors: rate.errors.full_messages,
       }
+    end
+  end
+
+  def ensure_shipping_options_exist(csv_data)
+    # Group data by shipping method to calculate starting rates and countries
+    shipping_methods_data = {}
+
+    csv_data.each do |row|
+      next if row.to_h.values.all?(&:blank?)
+
+      method_name = row[:shipping_method]&.strip
+      next if method_name.blank?
+
+      shipping_methods_data[method_name] ||= {
+        countries: Set.new,
+        min_price: Float::INFINITY
+      }
+
+      # Collect countries
+      country = row[:country]&.strip&.upcase
+      shipping_methods_data[method_name][:countries].add(country) if country.present?
+
+      # Track minimum price
+      flat_rate = row[:flat_rate].to_f
+      if flat_rate > 0 && flat_rate < shipping_methods_data[method_name][:min_price]
+        shipping_methods_data[method_name][:min_price] = flat_rate
+      end
+    end
+
+    # Create missing shipping options
+    shipping_methods_data.each do |method_name, data|
+      next if company.shipping_options.exists?(name: method_name)
+
+      min_price = data[:min_price] == Float::INFINITY ? 0 : data[:min_price]
+
+      company.shipping_options.create!(
+        name: method_name,
+        delivery_time: 5, # Default to 5 days
+        starting_rate: min_price,
+        countries: data[:countries].to_a,
+        status: "active"
+      )
     end
   end
 

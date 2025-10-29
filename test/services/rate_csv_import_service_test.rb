@@ -106,20 +106,31 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
     assert_equal 2, result[:row_errors].count
   end
 
-  test "should return error for non-existent shipping method" do
+  test "should auto-create non-existent shipping method" do
     csv_content = <<~CSV
       shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
-      Non Existent Method,US,CA,0,5,9.99,5.00
+      New Method,US,CA,0,5,9.99,5.00
+      New Method,CA,,0,10,15.99,10.00
     CSV
 
     file = create_csv_file(csv_content)
     service = RateCsvImportService.new(company: @company, file: file)
 
+    initial_count = @company.shipping_options.count
+
     result = service.call
 
-    assert_not result[:success]
-    assert result[:row_errors].present?
-    assert_includes result[:row_errors].first[:errors].first, "Shipping method 'Non Existent Method' not found"
+    assert result[:success]
+    assert_equal 2, result[:imported_count]
+
+    # Verify shipping method was created
+    new_method = @company.shipping_options.find_by(name: "New Method")
+    assert_not_nil new_method
+    assert_equal 5, new_method.delivery_time
+    assert_equal 9.99, new_method.starting_rate
+    assert_equal [ "US", "CA" ], new_method.countries.sort
+    assert_equal "active", new_method.status
+    assert_equal initial_count + 1, @company.shipping_options.count
   end
 
   test "should validate country code is 2 characters" do
@@ -293,11 +304,47 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
     assert_includes result[:row_errors].first[:errors].join, "Weight range overlaps"
   end
 
+  test "should auto-create multiple new shipping methods" do
+    csv_content = <<~CSV
+      shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
+      New Method A,US,CA,0,5,12.99,8.00
+      New Method B,CA,,0,10,8.99,5.00
+      New Method A,MX,,0,8,15.99,10.00
+    CSV
+
+    file = create_csv_file(csv_content)
+    service = RateCsvImportService.new(company: @company, file: file)
+
+    initial_count = @company.shipping_options.count
+
+    result = service.call
+
+    assert result[:success]
+    assert_equal 3, result[:imported_count]
+    assert_equal initial_count + 2, @company.shipping_options.count
+
+    # Verify New Method A
+    method_a = @company.shipping_options.find_by(name: "New Method A")
+    assert_not_nil method_a
+    assert_equal 5, method_a.delivery_time
+    assert_equal 12.99, method_a.starting_rate
+    assert_equal [ "MX", "US" ], method_a.countries.sort
+    assert_equal "active", method_a.status
+
+    # Verify New Method B
+    method_b = @company.shipping_options.find_by(name: "New Method B")
+    assert_not_nil method_b
+    assert_equal 5, method_b.delivery_time
+    assert_equal 8.99, method_b.starting_rate
+    assert_equal [ "CA" ], method_b.countries
+    assert_equal "active", method_b.status
+  end
+
   test "should return partial success when some rows succeed and some fail" do
     csv_content = <<~CSV
       shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
       Express Shipping,US,CA,0,5,9.99,5.00
-      Non Existent Method,US,NY,0,5,9.99,5.00
+      Express Shipping,INVALID,NY,0,5,9.99,5.00
       Express Shipping,US,TX,0,10,12.99,8.00
     CSV
 
