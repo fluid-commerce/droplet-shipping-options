@@ -18,18 +18,18 @@
         <h2 class="text-2xl font-bold text-gray-900 mb-2">Rate Tables</h2>
         <p class="text-gray-600">Configure pricing for different shipping methods and regions</p>
       </div>
-      <% if @shipping_options.any? %>
-        <div class="flex items-center gap-3">
-          <%= link_to import_rate_tables_path, class: "inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105", data: { turbo_frame: "_top" } do %>
-            <i class="fa-solid fa-file-import mr-2"></i>
-            Import CSV
-          <% end %>
+      <div class="flex items-center gap-3">
+        <%= link_to import_rate_tables_path, class: "inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105", data: { turbo_frame: "_top" } do %>
+          <i class="fa-solid fa-file-import mr-2"></i>
+          Import CSV
+        <% end %>
+        <% if @shipping_options.any? %>
           <%= link_to new_rate_table_path, class: "inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105", data: { turbo_frame: "_top" } do %>
             <i class="fa-solid fa-plus mr-2"></i>
             Add Rate Table
           <% end %>
-        </div>
-      <% end %>
+        <% end %>
+      </div>
     </div>
   <% end %>
 
@@ -103,19 +103,20 @@
             <i class="fa-solid fa-table text-4xl"></i>
           </div>
           <h3 class="mt-2 text-sm font-medium text-gray-900">No rate tables found</h3>
-          <p class="mt-1 text-sm text-gray-500">Create shipping methods and add rate tables to get started.</p>
+          <p class="mt-1 text-sm text-gray-500">Import a CSV file or add rate tables manually to get started.</p>
           <div class="mt-6 flex gap-3 justify-center">
+            <%= link_to import_rate_tables_path, class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors duration-200", data: { turbo_frame: "_top" } do %>
+              <i class="fa-solid fa-file-import mr-2"></i>
+              Import CSV
+            <% end %>
             <% if @shipping_options.any? %>
-              <%= link_to import_rate_tables_path, class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors duration-200", data: { turbo_frame: "_top" } do %>
-                <i class="fa-solid fa-file-import mr-2"></i>
-                Import CSV
-              <% end %>
               <%= link_to new_rate_table_path, class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200", data: { turbo_frame: "_top" } do %>
                 <i class="fa-solid fa-plus mr-2"></i>
                 Add Rate Table
               <% end %>
             <% else %>
               <%= link_to shipping_methods_shipping_options_path, class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-violet-600 hover:bg-violet-700 transition-colors duration-200" do %>
+                <i class="fa-solid fa-plus mr-2"></i>
                 Create Shipping Method
               <% end %>
             <% end %>

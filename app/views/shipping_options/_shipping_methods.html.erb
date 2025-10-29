@@ -57,10 +57,11 @@
                     } do %>
                   Disable
                 <% end %>
-                <a href="#" 
+                <a href="#"
                    class="text-red-600 hover:text-red-900 delete-shipping-btn"
                    data-shipping-option-id="<%= shipping_option.id %>"
                    data-shipping-option-name="<%= shipping_option.name %>"
+                   data-rate-count="<%= shipping_option.rates.count %>"
                    data-delete-url="<%= shipping_option_path(shipping_option) %>"
                    data-turbo-frame="_top">
                   Delete
@@ -99,10 +100,18 @@ if (!window.deleteListenersAdded) {
 
       const shippingOptionId = event.target.dataset.shippingOptionId;
       const shippingOptionName = event.target.dataset.shippingOptionName;
+      const rateCount = parseInt(event.target.dataset.rateCount) || 0;
       const deleteUrl = event.target.dataset.deleteUrl;
 
-      const confirmMessage = `Are you sure you want to DELETE "${shippingOptionName}"? This action cannot be undone and will permanently remove this shipping method.`;
-      
+      let confirmMessage = `Are you sure you want to DELETE "${shippingOptionName}"?\n\n`;
+
+      if (rateCount > 0) {
+        const rateText = rateCount === 1 ? 'rate table' : 'rate tables';
+        confirmMessage += `⚠️ WARNING: This will also permanently delete ${rateCount} associated ${rateText}.\n\n`;
+      }
+
+      confirmMessage += `This action cannot be undone and will permanently remove this shipping method${rateCount > 0 ? ' and all its rate tables' : ''}.`;
+
       if (confirm(confirmMessage)) {
         deleteShippingOption(deleteUrl);
       }
