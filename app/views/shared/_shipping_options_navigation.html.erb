@@ -87,20 +87,39 @@ function initializeNavigation() {
     if (shippingContent) {
       const contentText = shippingContent.textContent || shippingContent.innerText;
       
-      // More specific detection based on actual content - check Overview first
+      // More specific detection based on actual content
+      // Check for more specific markers first to avoid false matches
+      
+      // Check for Overview - most specific patterns first
       if (contentText.includes('Shipping Overview') || contentText.includes('Monitor your shipping') || contentText.includes('Active Methods') || contentText.includes('Configured Regions')) {
         return 'overview';
-      } else if (contentText.includes('Rate Tables') || contentText.includes('rate table') || contentText.includes('Add Rate Table')) {
-        return 'rate_tables';
-      } else if (contentText.includes('Shipping Methods') || contentText.includes('shipping method') || contentText.includes('Add Method') || contentText.includes('Express shipping') || contentText.includes('Normal Shipping')) {
+      }
+      
+      // Check for Shipping Methods - look for page title and specific content
+      // Use more specific patterns to avoid false matches with rate tables mentions
+      if (contentText.includes('Manage and configure your shipping methods') || 
+          (contentText.includes('Shipping Methods') && !contentText.includes('Rate Tables Overview'))) {
         return 'shipping_methods';
+      }
+      
+      // Check for Rate Tables last - this is the least specific
+      if (contentText.includes('Rate Tables Overview') || contentText.includes('Add Rate Table') || 
+          (contentText.includes('Rate Tables') && !contentText.includes('Shipping Methods'))) {
+        return 'rate_tables';
       }
     }
     
     // Fallback to URL-based detection
     if (currentPath.includes('/rates') || currentPath.includes('/rate_tables')) {
       return 'rate_tables';
+    } else if (currentPath.includes('/shipping_methods')) {
+      return 'shipping_methods';
     } else if (currentPath.includes('/shipping_options')) {
+      // If path is exactly /shipping_options, it's the overview
+      if (currentPath === '/shipping_options' || currentPath === '/shipping_options/') {
+        return 'overview';
+      }
+      // Otherwise could be shipping methods or other
       return 'shipping_methods';
     } else {
       return 'overview';
