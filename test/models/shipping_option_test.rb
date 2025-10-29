@@ -4,10 +4,10 @@ class ShippingOptionTest < ActiveSupport::TestCase
   def setup
     @company = companies(:acme)
     @shipping_option = ShippingOption.new(
-      name: "Express Shipping",
+      name: "Test Shipping Method",
       delivery_time: 2,
       starting_rate: 15.99,
-      countries: %w[US CA],
+      countries: %w[GB DE],
       status: "active",
       company: @company
     )
@@ -114,22 +114,22 @@ class ShippingOptionTest < ActiveSupport::TestCase
   end
 
   test "should allow duplicate names for different countries" do
-    # Create first shipping option with US and CA
+    # Create first shipping option with GB and DE
     first_option = ShippingOption.create!(
-      name: "Standard Shipping",
+      name: "International Express",
       delivery_time: 5,
       starting_rate: 9.99,
-      countries: %w[US CA],
+      countries: %w[GB DE],
       status: "active",
       company: @company
     )
 
     # Should be able to create another with same name but different countries
     second_option = ShippingOption.new(
-      name: "Standard Shipping",
+      name: "International Express",
       delivery_time: 5,
       starting_rate: 9.99,
-      countries: %w[UK FR],
+      countries: %w[FR ES],
       status: "active",
       company: @company
     )
@@ -141,51 +141,51 @@ class ShippingOptionTest < ActiveSupport::TestCase
   test "should not allow duplicate names with same countries" do
     # Create first shipping option
     ShippingOption.create!(
-      name: "Express Shipping",
+      name: "Fast Delivery",
       delivery_time: 2,
       starting_rate: 19.99,
-      countries: %w[US CA],
+      countries: %w[JP KR],
       status: "active",
       company: @company
     )
 
     # Try to create another with same name and same countries
     duplicate_option = ShippingOption.new(
-      name: "Express Shipping",
+      name: "Fast Delivery",
       delivery_time: 3,
       starting_rate: 29.99,
-      countries: %w[US CA],
+      countries: %w[JP KR],
       status: "active",
       company: @company
     )
 
     assert_not duplicate_option.valid?
-    assert_includes duplicate_option.errors[:name], "already exists for US, CA"
+    assert_includes duplicate_option.errors[:name], "already exists for JP, KR"
   end
 
   test "should not allow duplicate names with overlapping countries" do
-    # Create first shipping option with US and CA
+    # Create first shipping option with AU and NZ
     ShippingOption.create!(
-      name: "Priority Shipping",
+      name: "Pacific Express",
       delivery_time: 3,
       starting_rate: 14.99,
-      countries: %w[US CA],
+      countries: %w[AU NZ],
       status: "active",
       company: @company
     )
 
     # Try to create another with same name and one overlapping country
     overlapping_option = ShippingOption.new(
-      name: "Priority Shipping",
+      name: "Pacific Express",
       delivery_time: 4,
       starting_rate: 24.99,
-      countries: %w[CA MX],
+      countries: %w[NZ FJ],
       status: "active",
       company: @company
     )
 
     assert_not overlapping_option.valid?
-    assert_includes overlapping_option.errors[:name], "already exists for CA"
+    assert_includes overlapping_option.errors[:name], "already exists for NZ"
   end
 
   test "should allow same name for different companies" do
@@ -193,20 +193,20 @@ class ShippingOptionTest < ActiveSupport::TestCase
 
     # Create shipping option for first company
     ShippingOption.create!(
-      name: "Ground Shipping",
+      name: "Global Standard",
       delivery_time: 7,
       starting_rate: 5.99,
-      countries: %w[US],
+      countries: %w[CN IN],
       status: "active",
       company: @company
     )
 
     # Should be able to create same name with same country for different company
     other_option = ShippingOption.new(
-      name: "Ground Shipping",
+      name: "Global Standard",
       delivery_time: 7,
       starting_rate: 5.99,
-      countries: %w[US],
+      countries: %w[CN IN],
       status: "active",
       company: other_company
     )
@@ -216,10 +216,10 @@ class ShippingOptionTest < ActiveSupport::TestCase
 
   test "should allow updating shipping option without triggering validation error" do
     option = ShippingOption.create!(
-      name: "Overnight Shipping",
+      name: "Next Day Air",
       delivery_time: 1,
       starting_rate: 39.99,
-      countries: %w[US],
+      countries: %w[SG MY],
       status: "active",
       company: @company
     )
