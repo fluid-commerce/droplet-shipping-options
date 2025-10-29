@@ -64,3 +64,29 @@ a:not([class*="text-"]) {
 .error-field {
   @apply text-red-500;
 }
+
+/* Pagy pagination styles */
+.pagy-nav {
+  @apply flex items-center gap-1;
+}
+
+.pagy-nav a,
+.pagy-nav .page {
+  @apply inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200;
+}
+
+.pagy-nav a {
+  @apply text-gray-700 bg-white border border-gray-300 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700;
+}
+
+.pagy-nav .current {
+  @apply bg-blue-600 text-white border border-blue-600 cursor-default;
+}
+
+.pagy-nav .disabled {
+  @apply text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed;
+}
+
+.pagy-nav .gap {
+  @apply text-gray-500 px-3 py-2;
+}

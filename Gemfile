@@ -24,6 +24,7 @@ gem "solid_queue"
 gem "thruster", require: false
 gem "turbo-rails"
 gem "vite_rails", "~> 3.0", ">= 3.0.19"
+gem "pagy", "~> 9.4"
 
 group :development, :test do
   gem "brakeman", require: false

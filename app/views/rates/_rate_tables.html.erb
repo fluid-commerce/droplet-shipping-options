@@ -34,8 +34,60 @@
   <% end %>
 
   <% unless @shipping_option %>
+    <!-- Filters Section -->
+    <div class="mb-6 bg-gray-50 rounded-xl p-6 border border-gray-200">
+      <%= form_with url: rate_tables_path, method: :get, local: true, class: "space-y-4" do |f| %>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <!-- Shipping Method Filter -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Shipping Method</label>
+            <%= select_tag :shipping_method,
+                options_for_select([["All Methods", ""]] + @shipping_options.map { |so| [so.name, so.id] }, params[:shipping_method]),
+                class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" %>
+          </div>
+
+          <!-- Country Filter -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Country</label>
+            <%= select_tag :country,
+                options_for_select([["All Countries", ""]] + @countries.map { |c| [c, c] }, params[:country]),
+                class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" %>
+          </div>
+
+          <!-- Region Filter -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Region</label>
+            <%= select_tag :region,
+                options_for_select([["All Regions", ""]] + @regions.map { |r| [r, r] }, params[:region]),
+                class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" %>
+          </div>
+
+          <!-- Min Weight Filter -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Min Weight (lbs)</label>
+            <%= number_field_tag :weight_min, params[:weight_min],
+                placeholder: "Min weight",
+                class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" %>
+          </div>
+
+          <!-- Max Weight Filter -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Max Weight (lbs)</label>
+            <%= number_field_tag :weight_max, params[:weight_max],
+                placeholder: "Max weight",
+                class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" %>
+          </div>
+        </div>
+
+        <div class="flex gap-3">
+          <%= f.submit "Apply Filters", class: "inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105" %>
+          <%= link_to "Clear Filters", rate_tables_path, class: "inline-flex items-center px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-all duration-200" %>
+        </div>
+      <% end %>
+    </div>
+
     <div class="overflow-x-auto">
-      <% if @shipping_options.any? && @shipping_options.joins(:rates).any? %>
+      <% if @rates&.any? %>
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
@@ -49,54 +101,62 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <% @shipping_options.includes(:rates).each do |shipping_option| %>
-              <% shipping_option.rates.each do |rate| %>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
-                      <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
-                        <i class="fa-solid fa-truck text-white text-sm"></i>
-                      </div>
-                      <div>
-                        <div class="text-sm font-medium text-gray-900"><%= shipping_option.name %></div>
-                        <div class="text-sm text-gray-500"><%= shipping_option.countries&.join(', ') || '-' %></div>
-                      </div>
+            <% @rates.each do |rate| %>
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
+                      <i class="fa-solid fa-truck text-white text-sm"></i>
                     </div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <%= rate.country %>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <%= rate.region.present? ? rate.region : "-" %>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <%= rate.weight_range %>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                    $<%= number_with_precision(rate.flat_rate, precision: 2) %>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                    $<%= number_with_precision(rate.min_charge, precision: 2) %>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <%= link_to edit_rate_table_path(rate), class: "text-blue-600 hover:text-blue-900 mr-3", data: { turbo_frame: "_top" } do %>
-                      Edit
-                    <% end %>
-                    <button class="delete-rate-btn text-red-600 hover:text-red-900" 
-                            style: "color: #dc2626 !important;"
-                            data-rate-id="<%= rate.id %>"
-                            data-rate-country="<%= rate.country %>"
-                            data-rate-region="<%= rate.region %>"
-                            data-shipping-option-name="<%= rate.shipping_option.name %>"
-                            data-delete-url="<%= rate_table_path(rate) %>">
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              <% end %>
+                    <div>
+                      <div class="text-sm font-medium text-gray-900"><%= rate.shipping_option.name %></div>
+                      <div class="text-sm text-gray-500"><%= rate.shipping_option.countries&.join(', ') || '-' %></div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <%= rate.country %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <%= rate.region.present? ? rate.region : "-" %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <%= rate.weight_range %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                  $<%= number_with_precision(rate.flat_rate, precision: 2) %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                  $<%= number_with_precision(rate.min_charge, precision: 2) %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <%= link_to edit_rate_table_path(rate), class: "text-blue-600 hover:text-blue-900 mr-3", data: { turbo_frame: "_top" } do %>
+                    Edit
+                  <% end %>
+                  <button class="delete-rate-btn text-red-600 hover:text-red-900"
+                          style: "color: #dc2626 !important;"
+                          data-rate-id="<%= rate.id %>"
+                          data-rate-country="<%= rate.country %>"
+                          data-rate-region="<%= rate.region %>"
+                          data-shipping-option-name="<%= rate.shipping_option.name %>"
+                          data-delete-url="<%= rate_table_path(rate) %>">
+                    Delete
+                  </button>
+                </td>
+              </tr>
             <% end %>
           </tbody>
         </table>
+
+        <!-- Pagination -->
+        <div class="mt-6 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 pt-6 gap-4">
+          <div class="text-sm text-gray-700">
+            Showing <span class="font-medium"><%= @pagy.from %></span> to <span class="font-medium"><%= @pagy.to %></span> of <span class="font-medium"><%= @pagy.count %></span> results
+          </div>
+          <div class="pagy-nav">
+            <%== pagy_nav(@pagy, aria_label: 'Rate tables pagination') %>
+          </div>
+        </div>
       <% else %>
         <div class="text-center py-12">
           <div class="mx-auto h-12 w-12 text-gray-400">

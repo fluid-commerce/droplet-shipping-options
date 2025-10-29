@@ -8,6 +8,57 @@ class RatesController < ApplicationController
 
   def index
     @shipping_options = @company.shipping_options.includes(:rates)
+
+    # Build query for all rates
+    rates_query = Rate.joins(:shipping_option)
+                      .where(shipping_options: { company_id: @company.id })
+                      .includes(:shipping_option)
+                      .order(created_at: :desc)
+
+    # Apply filters with sanitized parameters
+    filter_params = filter_rate_params
+
+    if filter_params[:shipping_method].present?
+      rates_query = rates_query.where(shipping_option_id: filter_params[:shipping_method])
+    end
+
+    if filter_params[:country].present?
+      rates_query = rates_query.where(country: filter_params[:country])
+    end
+
+    if filter_params[:region].present?
+      rates_query = rates_query.where(region: filter_params[:region])
+    end
+
+    if filter_params[:weight_min].present?
+      rates_query = rates_query.where("min_range_lbs >= ?", filter_params[:weight_min])
+    end
+
+    if filter_params[:weight_max].present?
+      rates_query = rates_query.where("max_range_lbs <= ?", filter_params[:weight_max])
+    end
+
+    # Paginate results with sanitized filter params
+    @pagy, @rates = pagy(rates_query, limit: 20, params: filter_params)
+
+    # Store sanitized filter params for the view
+    @filter_params = filter_params
+
+    # Get unique values for filter dropdowns
+    @countries = Rate.joins(:shipping_option)
+                     .where(shipping_options: { company_id: @company.id })
+                     .distinct
+                     .pluck(:country)
+                     .compact
+                     .sort
+
+    @regions = Rate.joins(:shipping_option)
+                   .where(shipping_options: { company_id: @company.id })
+                   .where.not(region: nil)
+                   .distinct
+                   .pluck(:region)
+                   .compact
+                   .sort
   end
 
   def import
@@ -112,5 +163,16 @@ private
       :shipping_option_id, :country, :region, :min_range_lbs,
       :max_range_lbs, :flat_rate, :min_charge
     )
+  end
+
+  def filter_rate_params
+    result = {}
+    result[:shipping_method] =
+params[:shipping_method].to_i if params[:shipping_method].present? && params[:shipping_method].to_i > 0
+    result[:country] = params[:country].to_s.strip if params[:country].present?
+    result[:region] = params[:region].to_s.strip if params[:region].present?
+    result[:weight_min] = params[:weight_min].to_f if params[:weight_min].present? && params[:weight_min].to_f > 0
+    result[:weight_max] = params[:weight_max].to_f if params[:weight_max].present? && params[:weight_max].to_f > 0
+    result
   end
 end
