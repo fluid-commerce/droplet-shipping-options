@@ -22,8 +22,8 @@ Your CSV file **must** include these columns (order doesn't matter):
 | `shipping_method` | String | Name of existing shipping method | Express Shipping |
 | `country` | String (2 chars) | ISO 2-letter country code | US, CA, MX |
 | `region` | String (optional) | State/province **code** (leave blank for country-level rates) | CA, NY, ON, BC or blank |
-| `min_range_lbs` | Decimal | Minimum weight in pounds | 0, 5.5, 10 |
-| `max_range_lbs` | Decimal | Maximum weight in pounds | 5, 10.5, 25 |
+| `min_range_lbs` | Decimal (4 decimals) | Minimum weight in pounds | 0, 5.5, 10.1234 |
+| `max_range_lbs` | Decimal (4 decimals) | Maximum weight in pounds | 5, 10.5, 25.9999 |
 | `flat_rate` | Decimal | Shipping cost in dollars | 9.99, 15.50 |
 | `min_charge` | Decimal | Minimum charge in dollars | 5.00, 10.00 |
 
