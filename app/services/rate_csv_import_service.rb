@@ -82,8 +82,12 @@ private
     # Pre-scan CSV to create missing shipping options
     ensure_shipping_options_exist(csv_data)
 
-    csv_data.each_with_index do |row, index|
-      row_number = index + 2 # +2 because index is 0-based and we skip header row
+    # Preprocess and sort CSV data for proper import order
+    sorted_data = preprocess_and_sort_csv(csv_data)
+
+    sorted_data.each do |row_data|
+      row_number = row_data[:original_row_number]
+      row = row_data[:row]
 
       begin
         import_rate_row(row, row_number)
@@ -124,6 +128,30 @@ private
     end
   end
 
+  def preprocess_and_sort_csv(csv_data)
+    # Convert CSV rows to array with original row numbers for error reporting
+    rows_with_numbers = []
+    csv_data.each_with_index do |row, index|
+      next if row.to_h.values.all?(&:blank?)
+
+      rows_with_numbers << {
+        row: row,
+        original_row_number: index + 2, # +2 for 0-based index and header row
+      }
+    end
+
+    # Sort by: shipping_method, country, region (nulls first), then min_range_lbs
+    rows_with_numbers.sort_by do |row_data|
+      row = row_data[:row]
+      [
+        row[:shipping_method]&.strip.to_s,
+        row[:country]&.strip&.upcase.to_s,
+        row[:region]&.strip.to_s == "" ? "" : row[:region]&.strip.to_s, # Empty strings sort before others
+        row[:min_range_lbs].to_f,
+      ]
+    end
+  end
+
   def ensure_shipping_options_exist(csv_data)
     # Group data by shipping method to calculate starting rates and countries
     shipping_methods_data = {}
@@ -150,19 +178,30 @@ private
       end
     end
 
-    # Create missing shipping options
+    # Create or update shipping options
     shipping_methods_data.each do |method_name, data|
-      next if company.shipping_options.exists?(name: method_name)
-
       min_price = data[:min_price] == Float::INFINITY ? 0 : data[:min_price]
 
-      company.shipping_options.create!(
-        name: method_name,
-        delivery_time: 5, # Default to 5 days
-        starting_rate: min_price,
-        countries: data[:countries].to_a,
-        status: "active"
-      )
+      # Check if shipping option already exists
+      existing_option = company.shipping_options.find_by(name: method_name)
+
+      if existing_option
+        # Update countries to include new ones from CSV
+        updated_countries = (existing_option.countries + data[:countries].to_a).uniq
+        existing_option.update!(
+          countries: updated_countries,
+          starting_rate: [ existing_option.starting_rate, min_price ].min
+        )
+      else
+        # Create new shipping option
+        company.shipping_options.create!(
+          name: method_name,
+          delivery_time: 5, # Default to 5 days
+          starting_rate: min_price,
+          countries: data[:countries].to_a,
+          status: "active"
+        )
+      end
     end
   end
 

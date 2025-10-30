@@ -34,7 +34,8 @@ Your CSV file **must** include these columns (order doesn't matter):
 - **Country codes**: Must be exactly 2 characters (US, CA, MX, GB, etc.)
 - **First rate must start at 0**: For each unique shipping_method + country + region combination, the first rate must have `min_range_lbs = 0`
 - **No overlapping ranges**: Weight ranges cannot overlap for the same location and shipping method
-- **Shipping method must exist**: The shipping method name must match an existing method in your account
+- **Shipping method will be created if it doesn't exist**: The system will automatically create shipping methods from the CSV
+- **Automatic sorting**: The system automatically sorts rows by shipping method, country, region, and min_range_lbs, so you don't need to organize your CSV in any particular order
 
 ## Example CSV File
 
@@ -103,16 +104,16 @@ After uploading your CSV:
 
 1. **Download the sample CSV** from the import page to see the correct format
 2. **Test with a small file first** (2-3 rows) to verify your format
-3. **Check your shipping method names** - they must match exactly (case-sensitive)
+3. **Shipping methods are auto-created** - the system will create them if they don't exist
 4. **Use codes, not full names** for regions
-5. **Organize by location** - group all rates for the same location together
+5. **Order doesn't matter** - the system automatically sorts rows by shipping method, country, region, and min_range_lbs
 6. **Sequential weight ranges** - ensure ranges don't overlap and start at 0
 
 ## Troubleshooting
 
 ### "Shipping method not found"
-- Verify the shipping method name matches exactly (including spaces and capitalization)
-- Create the shipping method first if it doesn't exist
+- This error should rarely occur as shipping methods are automatically created during import
+- If you see this error, verify the shipping method name is consistent throughout the CSV file
 
 ### "Country is the wrong length"
 - Use 2-letter codes only (US, not USA or United States)

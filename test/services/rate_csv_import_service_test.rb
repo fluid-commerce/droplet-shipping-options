@@ -361,6 +361,63 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
     assert_includes result[:message], "error"
   end
 
+  test "should sort CSV rows by shipping method, country, region, and min_range_lbs" do
+    # CSV with deliberately unsorted rows
+    csv_content = <<~CSV
+      shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
+      Express Shipping,US,NY,5,10,14.99,10.00
+      Express Shipping,US,CA,10,25,24.99,15.00
+      Express Shipping,US,CA,0,5,9.99,5.00
+      Express Shipping,US,NY,0,5,12.99,8.00
+      Express Shipping,US,CA,5,10,14.99,10.00
+    CSV
+
+    file = create_csv_file(csv_content)
+    service = RateCsvImportService.new(company: @company, file: file)
+
+    result = service.call
+
+    assert result[:success], "Import should succeed with sorted data"
+    assert_equal 5, result[:imported_count]
+
+    # Verify CA rates are imported correctly (sorted)
+    ca_rates = @shipping_option.rates.where(country: "US", region: "CA").order(:min_range_lbs)
+    assert_equal 3, ca_rates.count
+    assert_equal 0, ca_rates[0].min_range_lbs
+    assert_equal 5, ca_rates[1].min_range_lbs
+    assert_equal 10, ca_rates[2].min_range_lbs
+
+    # Verify NY rates are imported correctly (sorted)
+    ny_rates = @shipping_option.rates.where(country: "US", region: "NY").order(:min_range_lbs)
+    assert_equal 2, ny_rates.count
+    assert_equal 0, ny_rates[0].min_range_lbs
+    assert_equal 5, ny_rates[1].min_range_lbs
+  end
+
+  test "should update existing shipping option with new countries from CSV" do
+    # Ensure shipping option exists with US only
+    existing_option = @company.shipping_options.find_by(name: "Express Shipping")
+    existing_option.update!(countries: [ "US" ])
+
+    csv_content = <<~CSV
+      shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
+      Express Shipping,CA,,0,10,15.99,10.00
+      Express Shipping,MX,,0,8,18.99,12.00
+    CSV
+
+    file = create_csv_file(csv_content)
+    service = RateCsvImportService.new(company: @company, file: file)
+
+    result = service.call
+
+    assert result[:success]
+    assert_equal 2, result[:imported_count]
+
+    # Verify shipping option now has all countries
+    existing_option.reload
+    assert_equal %w[CA MX US], existing_option.countries.sort
+  end
+
 private
 
   def create_csv_file(content)
