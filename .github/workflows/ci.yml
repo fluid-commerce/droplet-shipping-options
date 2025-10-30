@@ -164,6 +164,13 @@ jobs:
       - name: Run JavaScript tests
         run: yarn test
 
+      - name: Setup database
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432
+          REDIS_URL: redis://localhost:6379/0
+        run: bin/rails db:create db:migrate
+
       - name: Run Rails tests
         env:
           RAILS_ENV: test
