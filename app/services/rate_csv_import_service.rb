@@ -87,7 +87,7 @@ private
 
     # First pass: Validate all rows without saving
     validated_rates = []
-    
+
     sorted_data.each do |row_data|
       row_number = row_data[:original_row_number]
       row = row_data[:row]
@@ -118,10 +118,16 @@ private
 
   def validate_rate_row(row, row_number)
     # Skip empty rows
-    return [nil, nil] if row.to_h.values.all?(&:blank?)
+    return [ nil, nil ] if row.to_h.values.all?(&:blank?)
 
     shipping_option = find_shipping_option(row[:shipping_method], row_number)
-    return [nil, { row: row_number, errors: [ "Shipping method '#{row[:shipping_method]&.strip}' not found" ], data: row.to_h }] unless shipping_option
+    unless shipping_option
+      return [ nil, {
+        row: row_number,
+        errors: [ "Shipping method '#{row[:shipping_method]&.strip}' not found" ],
+        data: row.to_h,
+      }, ]
+    end
 
     region_value = row[:region]&.strip
     region_value = nil if region_value.blank?
@@ -136,13 +142,13 @@ private
     )
 
     if rate.valid?
-      [rate, nil]
+      [ rate, nil ]
     else
-      [nil, {
+      [ nil, {
         row: row_number,
         data: row.to_h,
         errors: rate.errors.full_messages,
-      }]
+      }, ]
     end
   end
 
