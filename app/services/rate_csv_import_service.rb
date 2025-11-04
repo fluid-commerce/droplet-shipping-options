@@ -129,7 +129,8 @@ private
       }, ]
     end
 
-    region_value = row[:region].present? ? row[:region].strip : nil
+    region_value = row[:region]
+    region_value = region_value.strip if region_value.is_a?(String)
     region_value = nil if region_value.blank?
 
     rate = shipping_option.rates.new(
@@ -250,6 +251,7 @@ private
       message: message,
       errors: @errors,
       row_errors: @row_errors,
+      imported_count: 0,
     }
   end
 end
