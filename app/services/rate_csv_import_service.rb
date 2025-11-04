@@ -93,7 +93,7 @@ private
       row = row_data[:row]
 
       begin
-        rate, error = validate_rate_row(row, row_number)
+        rate, error = validate_rate_row(row, row_number, validated_rates)
         if error
           @row_errors << error
         elsif rate
@@ -116,7 +116,7 @@ private
     end
   end
 
-  def validate_rate_row(row, row_number)
+  def validate_rate_row(row, row_number, validated_rates_in_batch = [])
     # Skip empty rows
     return [ nil, nil ] if row.to_h.values.all?(&:blank?)
 
@@ -142,15 +142,59 @@ private
       min_charge: BigDecimal(row[:min_charge].to_s)
     )
 
-    if rate.valid?
-      [ rate, nil ]
-    else
-      [ nil, {
+    # Validate against existing rates in database
+    unless rate.valid?
+      return [ nil, {
         row: row_number,
         data: row.to_h,
         errors: rate.errors.full_messages,
       }, ]
     end
+
+    # Also validate against other rates in the same batch
+    batch_errors = validate_against_batch(rate, validated_rates_in_batch)
+    if batch_errors.any?
+      return [ nil, {
+        row: row_number,
+        data: row.to_h,
+        errors: batch_errors,
+      }, ]
+    end
+
+    [ rate, nil ]
+  end
+
+  def validate_against_batch(rate, validated_rates_in_batch)
+    errors = []
+    country = rate.country
+    region = rate.region
+
+    # Find rates in the batch for the same location
+    same_location_rates = validated_rates_in_batch.select do |item|
+      item_rate = item[:rate]
+      item_rate.country == country && item_rate.region == region
+    end
+
+    # Check for overlapping ranges with rates in the batch
+    same_location_rates.each do |item|
+      other_rate = item[:rate]
+      if ranges_overlap?(rate, other_rate)
+        errors << "Weight range overlaps with existing rate " \
+                  "(#{other_rate.min_range_lbs}-#{other_rate.max_range_lbs} lbs)"
+        break
+      end
+    end
+
+    errors
+  end
+
+  def ranges_overlap?(rate1, rate2)
+    min1 = rate1.min_range_lbs || 0
+    max1 = rate1.max_range_lbs || Float::INFINITY
+    min2 = rate2.min_range_lbs || 0
+    max2 = rate2.max_range_lbs || Float::INFINITY
+
+    min1 < max2 && min2 < max1
   end
 
   def preprocess_and_sort_csv(csv_data)
