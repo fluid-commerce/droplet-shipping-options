@@ -66,7 +66,7 @@ private
   def success_result(shipping_options)
     {
       success: true,
-      shipping_options: shipping_options.uniq.map { |option| serialize_shipping_option(option) },
+      shipping_options: shipping_options.to_a.uniq(&:id).map { |option| serialize_shipping_option(option) },
     }
   end
 

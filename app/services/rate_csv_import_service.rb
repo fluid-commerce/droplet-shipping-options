@@ -129,7 +129,7 @@ private
       }, ]
     end
 
-    region_value = row[:region]&.strip
+    region_value = row[:region].present? ? row[:region].strip : nil
     region_value = nil if region_value.blank?
 
     rate = shipping_option.rates.new(

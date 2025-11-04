@@ -87,7 +87,7 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
     assert_equal 2, result[:imported_count]
   end
 
-  test "should return row errors for invalid data" do
+  test "should return row errors for invalid data and not import anything" do
     csv_content = <<~CSV
       shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
       Express Shipping,US,CA,0,5,9.99,5.00
@@ -100,8 +100,8 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
 
     result = service.call
 
-    assert result[:success]
-    assert_equal 1, result[:imported_count]
+    assert_not result[:success]
+    assert_equal 0, result[:imported_count]
     assert result[:row_errors].present?
     assert_equal 2, result[:row_errors].count
   end
@@ -340,7 +340,7 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
     assert_equal "active", method_b.status
   end
 
-  test "should return partial success when some rows succeed and some fail" do
+  test "should return failure when some rows succeed and some fail (all-or-nothing)" do
     csv_content = <<~CSV
       shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
       Express Shipping,US,CA,0,5,9.99,5.00
@@ -353,12 +353,12 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
 
     result = service.call
 
-    assert result[:success]
-    assert_equal 2, result[:imported_count]
+    assert_not result[:success]
+    assert_equal 0, result[:imported_count]
     assert result[:row_errors].present?
     assert_equal 1, result[:row_errors].count
-    assert_includes result[:message], "with"
-    assert_includes result[:message], "error"
+    assert_includes result[:message], "Import failed"
+    assert_includes result[:message], "No records were imported"
   end
 
   test "should sort CSV rows by shipping method, country, region, and min_range_lbs" do
