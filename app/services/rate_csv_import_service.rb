@@ -23,10 +23,10 @@ class RateCsvImportService
 
     import_rates(csv_data)
 
-    if @success_count > 0 && row_errors.empty?
+    if @row_errors.any?
+      failure("Import failed: #{@row_errors.count} row(s) have errors. No records were imported.")
+    elsif @success_count > 0
       success
-    elsif @success_count > 0 && row_errors.any?
-      partial_success
     else
       failure("No rates were imported")
     end
@@ -85,24 +85,43 @@ private
     # Preprocess and sort CSV data for proper import order
     sorted_data = preprocess_and_sort_csv(csv_data)
 
+    # First pass: Validate all rows without saving
+    validated_rates = []
+    
     sorted_data.each do |row_data|
       row_number = row_data[:original_row_number]
       row = row_data[:row]
 
       begin
-        import_rate_row(row, row_number)
+        rate, error = validate_rate_row(row, row_number)
+        if error
+          @row_errors << error
+        elsif rate
+          validated_rates << { rate: rate, row_number: row_number }
+        end
       rescue StandardError => e
-        @row_errors << { row: row_number, errors: [ e.message ] }
+        @row_errors << { row: row_number, errors: [ e.message ], data: row.to_h }
+      end
+    end
+
+    # If any errors, don't import anything
+    return if @row_errors.any?
+
+    # Second pass: All validations passed, save all records in a transaction
+    ActiveRecord::Base.transaction do
+      validated_rates.each do |item|
+        item[:rate].save!
+        @success_count += 1
       end
     end
   end
 
-  def import_rate_row(row, row_number)
+  def validate_rate_row(row, row_number)
     # Skip empty rows
-    return if row.to_h.values.all?(&:blank?)
+    return [nil, nil] if row.to_h.values.all?(&:blank?)
 
     shipping_option = find_shipping_option(row[:shipping_method], row_number)
-    return unless shipping_option
+    return [nil, { row: row_number, errors: [ "Shipping method '#{row[:shipping_method]&.strip}' not found" ], data: row.to_h }] unless shipping_option
 
     region_value = row[:region]&.strip
     region_value = nil if region_value.blank?
@@ -117,14 +136,13 @@ private
     )
 
     if rate.valid?
-      rate.save!
-      @success_count += 1
+      [rate, nil]
     else
-      @row_errors << {
+      [nil, {
         row: row_number,
         data: row.to_h,
         errors: rate.errors.full_messages,
-      }
+      }]
     end
   end
 
@@ -208,17 +226,7 @@ private
   def find_shipping_option(name, row_number)
     return nil if name.blank?
 
-    shipping_option = company.shipping_options.find_by(name: name.strip)
-
-    unless shipping_option
-      @row_errors << {
-        row: row_number,
-        errors: [ "Shipping method '#{name}' not found" ],
-      }
-      return nil
-    end
-
-    shipping_option
+    company.shipping_options.find_by(name: name.strip)
   end
 
   def success
@@ -226,15 +234,6 @@ private
       success: true,
       message: "Successfully imported #{@success_count} rate(s)",
       imported_count: @success_count,
-    }
-  end
-
-  def partial_success
-    {
-      success: true,
-      message: "Imported #{@success_count} rate(s) with #{row_errors.count} error(s)",
-      imported_count: @success_count,
-      row_errors: row_errors,
     }
   end
 

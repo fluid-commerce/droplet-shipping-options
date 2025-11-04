@@ -60,12 +60,13 @@ private
            .active
            .for_country(ship_to_country)
            .includes(:rates)
+           .order(:id)
   end
 
   def success_result(shipping_options)
     {
       success: true,
-      shipping_options: shipping_options.map { |option| serialize_shipping_option(option) },
+      shipping_options: shipping_options.uniq.map { |option| serialize_shipping_option(option) },
     }
   end
 

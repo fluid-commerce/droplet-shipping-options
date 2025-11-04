@@ -79,12 +79,7 @@ class RatesController < ApplicationController
     result = service.call
 
     if result[:success]
-      if result[:row_errors].present?
-        flash[:warning] = result[:message]
-        flash[:errors] = result[:row_errors]
-      else
-        flash[:notice] = result[:message]
-      end
+      flash[:notice] = result[:message]
       redirect_to rate_tables_path
     else
       flash.now[:alert] = result[:message]
