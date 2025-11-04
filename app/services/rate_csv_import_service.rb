@@ -110,10 +110,10 @@ private
     rate = shipping_option.rates.new(
       country: row[:country]&.strip&.upcase,
       region: region_value,
-      min_range_lbs: row[:min_range_lbs],
-      max_range_lbs: row[:max_range_lbs],
-      flat_rate: row[:flat_rate],
-      min_charge: row[:min_charge]
+      min_range_lbs: BigDecimal(row[:min_range_lbs].to_s),
+      max_range_lbs: BigDecimal(row[:max_range_lbs].to_s),
+      flat_rate: BigDecimal(row[:flat_rate].to_s),
+      min_charge: BigDecimal(row[:min_charge].to_s)
     )
 
     if rate.valid?
