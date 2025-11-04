@@ -175,6 +175,20 @@ private
       item_rate.country == country && item_rate.region == region
     end
 
+    # Check if this is the first rate for this location (considering both database and batch)
+    # The rate.valid? check already validates against the database, but we need to also check
+    # against the batch. If there are no rates in the batch for this location AND no rates
+    # in the database (which rate.valid? already checked), then this must be the first rate
+    # and must start at 0.
+    existing_db_rates = Rate.where(
+      shipping_option: rate.shipping_option,
+      country: country,
+      region: region
+    )
+    if existing_db_rates.empty? && same_location_rates.empty? && rate.min_range_lbs != 0
+      errors << "min_range_lbs must be 0 for the first rate of this shipping option and location"
+    end
+
     # Check for overlapping ranges with rates in the batch
     same_location_rates.each do |item|
       other_rate = item[:rate]
