@@ -141,6 +141,7 @@ private
       flat_rate: BigDecimal(row[:flat_rate].to_s),
       min_charge: BigDecimal(row[:min_charge].to_s)
     )
+    rate.skip_first_rate_validation = true
 
     # Validate against existing rates in database
     unless rate.valid?

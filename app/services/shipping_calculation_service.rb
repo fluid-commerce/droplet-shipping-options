@@ -38,17 +38,43 @@ class ShippingCalculationService
 
     total_weight_in_lb = 0.0
 
+    Rails.logger.info "[ShippingCalc] Calculating total weight for #{items.size} items"
+
     items.each do |item|
-      next unless item[:variant] && item[:variant][:weight] && item[:quantity]
+      item_id = item[:id]
+      variant_id = item[:variant]&.dig(:id)
+      quantity = item[:quantity]
+      weight = item[:variant]&.dig(:weight)
+      unit = item[:variant]&.dig(:unit_of_weight)
 
-      weight = item[:variant][:weight].to_f
-      quantity = item[:quantity].to_i
-      unit_of_weight = item[:variant][:unit_of_weight]&.downcase
+      if item[:variant].nil?
+        Rails.logger.warn "[ShippingCalc] Item #{item_id}: Skipped - no variant data"
+        next
+      end
 
-      weight_in_lb = convert_to_pounds(weight, unit_of_weight)
+      if weight.nil?
+        Rails.logger.warn "[ShippingCalc] Item #{item_id} (variant #{variant_id}), qty #{quantity}: Skipped - weight is nil"
+        next
+      end
 
-      total_weight_in_lb += (weight_in_lb * quantity)
+      unless quantity
+        Rails.logger.warn "[ShippingCalc] Item #{item_id} (variant #{variant_id}): Skipped - no quantity"
+        next
+      end
+
+      weight_value = weight.to_f
+      quantity_value = quantity.to_i
+      unit_of_weight = unit&.downcase
+
+      weight_in_lb = convert_to_pounds(weight_value, unit_of_weight)
+      item_total_weight = weight_in_lb * quantity_value
+
+      Rails.logger.info "[ShippingCalc] Item #{item_id} (variant #{variant_id}): #{weight} #{unit || 'lb'} × #{quantity_value} = #{item_total_weight.round(2)} lbs"
+
+      total_weight_in_lb += item_total_weight
     end
+
+    Rails.logger.info "[ShippingCalc] Total weight calculated: #{total_weight_in_lb.round(2)} lbs"
 
     total_weight_in_lb.round(2)
   end
