@@ -53,7 +53,9 @@ class ShippingCalculationService
       end
 
       if weight.nil?
-        Rails.logger.warn "[ShippingCalc] Item #{item_id} (variant #{variant_id}), qty #{quantity}: Skipped - weight is nil"
+        Rails.logger.warn(
+          "[ShippingCalc] Item #{item_id} (variant #{variant_id}), qty #{quantity}: Skipped - weight is nil"
+        )
         next
       end
 
@@ -69,7 +71,10 @@ class ShippingCalculationService
       weight_in_lb = convert_to_pounds(weight_value, unit_of_weight)
       item_total_weight = weight_in_lb * quantity_value
 
-      Rails.logger.info "[ShippingCalc] Item #{item_id} (variant #{variant_id}): #{weight} #{unit || 'lb'} × #{quantity_value} = #{item_total_weight.round(2)} lbs"
+      Rails.logger.info(
+        "[ShippingCalc] Item #{item_id} (variant #{variant_id}): " \
+        "#{weight} #{unit || 'lb'} × #{quantity_value} = #{item_total_weight.round(2)} lbs"
+      )
 
       total_weight_in_lb += item_total_weight
     end
