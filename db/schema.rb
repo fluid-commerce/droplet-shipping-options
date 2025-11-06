@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_10_005215) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_30_004116) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -74,8 +74,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_10_005215) do
     t.bigint "shipping_option_id", null: false
     t.string "country", null: false
     t.string "region"
-    t.decimal "min_range_lbs", precision: 8, scale: 2, null: false
-    t.decimal "max_range_lbs", precision: 8, scale: 2, null: false
+    t.decimal "min_range_lbs", precision: 8, scale: 4, null: false
+    t.decimal "max_range_lbs", precision: 8, scale: 4, null: false
     t.decimal "flat_rate", precision: 10, scale: 2, null: false
     t.decimal "min_charge", precision: 10, scale: 2, null: false
     t.datetime "created_at", null: false

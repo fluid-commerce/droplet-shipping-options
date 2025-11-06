@@ -30,19 +30,21 @@
 
           <% if flash[:row_errors].present? %>
             <div class="mt-3">
-              <h4 class="text-sm font-medium text-red-800 mb-2">Row Errors:</h4>
-              <div class="max-h-64 overflow-y-auto">
+              <h4 class="text-sm font-medium text-red-800 mb-2">
+                Import Errors (<%= flash[:row_errors].count %> row(s) with issues):
+              </h4>
+              <div class="max-h-96 overflow-y-auto border border-red-200 rounded-lg p-2">
                 <% flash[:row_errors].each do |row_error| %>
-                  <div class="mb-2 p-2 bg-red-100 rounded">
-                    <strong>Row <%= row_error[:row] %>:</strong>
-                    <ul class="list-disc list-inside ml-4">
+                  <div class="mb-3 p-3 bg-red-50 rounded border border-red-200">
+                    <strong class="text-red-900">Row <%= row_error[:row] %>:</strong>
+                    <ul class="list-disc list-inside ml-4 mt-1 text-sm text-red-800">
                       <% row_error[:errors].each do |error| %>
                         <li><%= error %></li>
                       <% end %>
                     </ul>
                     <% if row_error[:data] %>
-                      <div class="text-xs mt-1 text-red-600">
-                        Data: <%= row_error[:data].inspect %>
+                      <div class="text-xs mt-2 p-2 bg-white rounded border border-red-200 text-red-700 font-mono">
+                        <strong>Row data:</strong> <%= row_error[:data].inspect %>
                       </div>
                     <% end %>
                   </div>

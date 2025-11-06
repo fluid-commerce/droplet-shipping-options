@@ -90,23 +90,27 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
     result = @service.call
 
     assert result[:success]
-    assert_equal 15.99, result[:shipping_options].first[:shipping_total]
+    express_option = result[:shipping_options].find { |opt| opt[:shipping_title] == "Express Shipping" }
+    assert_not_nil express_option
+    assert_equal 15.99, express_option[:shipping_total]
   end
 
   test "should use starting_rate when no specific rate exists" do
     result = @service.call
 
     assert result[:success]
-    assert_equal 15.99, result[:shipping_options].first[:shipping_total]
+    express_option = result[:shipping_options].find { |opt| opt[:shipping_title] == "Express Shipping" }
+    assert_not_nil express_option
+    assert_equal 15.99, express_option[:shipping_total]
   end
 
   test "should format delivery time correctly" do
     result = @service.call
 
     assert result[:success]
-    shipping_option = result[:shipping_options].first
-
-    assert_equal "2 days", shipping_option[:shipping_delivery_time_estimate]
+    express_option = result[:shipping_options].find { |opt| opt[:shipping_title] == "Express Shipping" }
+    assert_not_nil express_option
+    assert_equal "2 days", express_option[:shipping_delivery_time_estimate]
   end
 
   # Tests for calculate_total_weight method

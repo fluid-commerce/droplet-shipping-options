@@ -1,6 +1,8 @@
 class Rate < ApplicationRecord
   belongs_to :shipping_option
 
+  attr_accessor :skip_first_rate_validation
+
   validates :country, presence: true, length: { is: 2 }
   validates :min_range_lbs, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :max_range_lbs, presence: true, numericality: { greater_than: 0 }
@@ -48,9 +50,12 @@ private
       region: region
     ).where.not(id: id)
 
-    if existing_rates.empty? && min_range_lbs != 0
-      errors.add(:min_range_lbs, "must be 0 for the first rate of this shipping option and location")
-      return
+    # Skip first rate validation during CSV import (handled by service)
+    unless skip_first_rate_validation
+      if existing_rates.empty? && min_range_lbs != 0
+        errors.add(:min_range_lbs, "must be 0 for the first rate of this shipping option and location")
+        return
+      end
     end
 
     existing_rates.each do |existing_rate|

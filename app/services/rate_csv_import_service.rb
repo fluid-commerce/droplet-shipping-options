@@ -23,10 +23,10 @@ class RateCsvImportService
 
     import_rates(csv_data)
 
-    if @success_count > 0 && row_errors.empty?
+    if @row_errors.any?
+      failure("Import failed: #{@row_errors.count} row(s) have errors. No records were imported.")
+    elsif @success_count > 0
       success
-    elsif @success_count > 0 && row_errors.any?
-      partial_success
     else
       failure("No rates were imported")
     end
@@ -85,26 +85,52 @@ private
     # Preprocess and sort CSV data for proper import order
     sorted_data = preprocess_and_sort_csv(csv_data)
 
+    # First pass: Validate all rows without saving
+    validated_rates = []
+
     sorted_data.each do |row_data|
       row_number = row_data[:original_row_number]
       row = row_data[:row]
 
       begin
-        import_rate_row(row, row_number)
+        rate, error = validate_rate_row(row, row_number, validated_rates)
+        if error
+          @row_errors << error
+        elsif rate
+          validated_rates << { rate: rate, row_number: row_number }
+        end
       rescue StandardError => e
-        @row_errors << { row: row_number, errors: [ e.message ] }
+        @row_errors << { row: row_number, errors: [ e.message ], data: row.to_h }
+      end
+    end
+
+    # If any errors, don't import anything
+    return if @row_errors.any?
+
+    # Second pass: All validations passed, save all records in a transaction
+    ActiveRecord::Base.transaction do
+      validated_rates.each do |item|
+        item[:rate].save!
+        @success_count += 1
       end
     end
   end
 
-  def import_rate_row(row, row_number)
+  def validate_rate_row(row, row_number, validated_rates_in_batch = [])
     # Skip empty rows
-    return if row.to_h.values.all?(&:blank?)
+    return [ nil, nil ] if row.to_h.values.all?(&:blank?)
 
     shipping_option = find_shipping_option(row[:shipping_method], row_number)
-    return unless shipping_option
+    unless shipping_option
+      return [ nil, {
+        row: row_number,
+        errors: [ "Shipping method '#{row[:shipping_method]&.strip}' not found" ],
+        data: row.to_h,
+      }, ]
+    end
 
-    region_value = row[:region]&.strip
+    region_value = row[:region]
+    region_value = region_value.strip if region_value.is_a?(String)
     region_value = nil if region_value.blank?
 
     rate = shipping_option.rates.new(
@@ -115,17 +141,75 @@ private
       flat_rate: BigDecimal(row[:flat_rate].to_s),
       min_charge: BigDecimal(row[:min_charge].to_s)
     )
+    rate.skip_first_rate_validation = true
 
-    if rate.valid?
-      rate.save!
-      @success_count += 1
-    else
-      @row_errors << {
+    # Validate against existing rates in database
+    unless rate.valid?
+      return [ nil, {
         row: row_number,
         data: row.to_h,
         errors: rate.errors.full_messages,
-      }
+      }, ]
     end
+
+    # Also validate against other rates in the same batch
+    batch_errors = validate_against_batch(rate, validated_rates_in_batch)
+    if batch_errors.any?
+      return [ nil, {
+        row: row_number,
+        data: row.to_h,
+        errors: batch_errors,
+      }, ]
+    end
+
+    [ rate, nil ]
+  end
+
+  def validate_against_batch(rate, validated_rates_in_batch)
+    errors = []
+    country = rate.country
+    region = rate.region
+
+    # Find rates in the batch for the same location
+    same_location_rates = validated_rates_in_batch.select do |item|
+      item_rate = item[:rate]
+      item_rate.country == country && item_rate.region == region
+    end
+
+    # Check if this is the first rate for this location (considering both database and batch)
+    # The rate.valid? check already validates against the database, but we need to also check
+    # against the batch. If there are no rates in the batch for this location AND no rates
+    # in the database (which rate.valid? already checked), then this must be the first rate
+    # and must start at 0.
+    existing_db_rates = Rate.where(
+      shipping_option: rate.shipping_option,
+      country: country,
+      region: region
+    )
+    if existing_db_rates.empty? && same_location_rates.empty? && rate.min_range_lbs != 0
+      errors << "min_range_lbs must be 0 for the first rate of this shipping option and location"
+    end
+
+    # Check for overlapping ranges with rates in the batch
+    same_location_rates.each do |item|
+      other_rate = item[:rate]
+      if ranges_overlap?(rate, other_rate)
+        errors << "Weight range overlaps with existing rate " \
+                  "(#{other_rate.min_range_lbs}-#{other_rate.max_range_lbs} lbs)"
+        break
+      end
+    end
+
+    errors
+  end
+
+  def ranges_overlap?(rate1, rate2)
+    min1 = rate1.min_range_lbs || 0
+    max1 = rate1.max_range_lbs || Float::INFINITY
+    min2 = rate2.min_range_lbs || 0
+    max2 = rate2.max_range_lbs || Float::INFINITY
+
+    min1 < max2 && min2 < max1
   end
 
   def preprocess_and_sort_csv(csv_data)
@@ -208,17 +292,7 @@ private
   def find_shipping_option(name, row_number)
     return nil if name.blank?
 
-    shipping_option = company.shipping_options.find_by(name: name.strip)
-
-    unless shipping_option
-      @row_errors << {
-        row: row_number,
-        errors: [ "Shipping method '#{name}' not found" ],
-      }
-      return nil
-    end
-
-    shipping_option
+    company.shipping_options.find_by(name: name.strip)
   end
 
   def success
@@ -229,15 +303,6 @@ private
     }
   end
 
-  def partial_success
-    {
-      success: true,
-      message: "Imported #{@success_count} rate(s) with #{row_errors.count} error(s)",
-      imported_count: @success_count,
-      row_errors: row_errors,
-    }
-  end
-
   def failure(message)
     @errors << message unless @errors.include?(message)
     {
@@ -245,6 +310,7 @@ private
       message: message,
       errors: @errors,
       row_errors: @row_errors,
+      imported_count: 0,
     }
   end
 end
