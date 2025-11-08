@@ -5,7 +5,45 @@
       <p class="text-gray-600">Upload a CSV file to bulk import shipping rates for your methods.</p>
     </div>
 
-  <% if flash[:alert] || flash[:errors] || flash[:row_errors] %>
+    <!-- Toast notification for auto-correctable errors -->
+    <% if flash[:all_auto_correctable] && flash[:correction_summary] %>
+      <div id="auto-correct-toast" class="fixed top-4 right-4 z-50 bg-yellow-50 border-2 border-yellow-400 rounded-lg shadow-lg p-6 max-w-md">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <i class="fa-solid fa-lightbulb text-yellow-600 text-xl"></i>
+          </div>
+          <div class="ml-3 flex-1">
+            <h3 class="text-sm font-semibold text-yellow-900 mb-2">
+              Auto-Correctable Errors Found
+            </h3>
+            <p class="text-sm text-yellow-800 mb-3">
+              All errors in your CSV can be automatically corrected. The following values exceed the maximum allowed and will be adjusted to the upper bound:
+            </p>
+            <div class="mb-4 max-h-48 overflow-y-auto text-xs text-yellow-800 space-y-1">
+              <% flash[:correction_summary].each do |correction| %>
+                <div class="bg-yellow-100 p-2 rounded">
+                  <strong>Row <%= correction[:row] %></strong> - <%= correction[:field].to_s.humanize %>: 
+                  <%= correction[:original] %> → <strong><%= correction[:corrected] %></strong>
+                </div>
+              <% end %>
+            </div>
+            <div class="flex space-x-3">
+              <%= button_tag "Yes, Apply Corrections", type: "button", 
+                  class: "px-4 py-2 text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 rounded-lg transition-colors", 
+                  onclick: "confirmAutoCorrections()" %>
+              <%= button_tag "No, Cancel", type: "button", 
+                  class: "px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors", 
+                  onclick: "dismissToast()" %>
+            </div>
+          </div>
+          <button type="button" onclick="dismissToast()" class="ml-4 text-yellow-600 hover:text-yellow-800">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+      </div>
+    <% end %>
+
+  <% if (flash[:alert] || flash[:errors] || flash[:row_errors]) && !flash[:all_auto_correctable] %>
     <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
       <div class="flex">
         <div class="flex-shrink-0">
@@ -33,20 +71,55 @@
               <h4 class="text-sm font-medium text-red-800 mb-2">
                 Import Errors (<%= flash[:row_errors].count %> row(s) with issues):
               </h4>
+              <% if flash[:has_auto_correctable] %>
+                <div class="mb-3 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
+                  <div class="flex items-start">
+                    <i class="fa-solid fa-lightbulb text-yellow-600 mt-0.5 mr-2"></i>
+                    <div class="flex-1">
+                      <p class="text-sm font-medium text-yellow-900 mb-1">
+                        Some errors can be auto-corrected
+                      </p>
+                      <p class="text-xs text-yellow-800">
+                        Values that exceed the maximum allowed will be automatically adjusted to the upper bound.
+                        You can choose to apply these corrections or fix the file manually.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
               <div class="max-h-96 overflow-y-auto border border-red-200 rounded-lg p-2">
                 <% flash[:row_errors].each do |row_error| %>
-                  <div class="mb-3 p-3 bg-red-50 rounded border border-red-200">
-                    <strong class="text-red-900">Row <%= row_error[:row] %>:</strong>
-                    <ul class="list-disc list-inside ml-4 mt-1 text-sm text-red-800">
-                      <% row_error[:errors].each do |error| %>
-                        <li><%= error %></li>
-                      <% end %>
-                    </ul>
-                    <% if row_error[:data] %>
-                      <div class="text-xs mt-2 p-2 bg-white rounded border border-red-200 text-red-700 font-mono">
-                        <strong>Row data:</strong> <%= row_error[:data].inspect %>
+                  <div class="mb-3 p-3 <%= row_error[:auto_correctable] ? 'bg-yellow-50 border-yellow-300' : 'bg-red-50 border-red-200' %> rounded border">
+                    <div class="flex items-start justify-between">
+                      <div class="flex-1">
+                        <strong class="<%= row_error[:auto_correctable] ? 'text-yellow-900' : 'text-red-900' %>">
+                          Row <%= row_error[:row] %>:
+                          <% if row_error[:auto_correctable] %>
+                            <span class="text-xs font-normal text-yellow-700">(Auto-correctable)</span>
+                          <% end %>
+                        </strong>
+                        <ul class="list-disc list-inside ml-4 mt-1 text-sm <%= row_error[:auto_correctable] ? 'text-yellow-800' : 'text-red-800' %>">
+                          <% row_error[:errors].each do |error| %>
+                            <li><%= error %></li>
+                          <% end %>
+                        </ul>
+                        <% if row_error[:corrections] && row_error[:corrections].any? %>
+                          <div class="mt-2 text-xs p-2 bg-white rounded border <%= row_error[:auto_correctable] ? 'border-yellow-300' : 'border-red-200' %>">
+                            <strong class="<%= row_error[:auto_correctable] ? 'text-yellow-900' : 'text-red-900' %>">Corrections:</strong>
+                            <ul class="list-disc list-inside ml-4 mt-1 <%= row_error[:auto_correctable] ? 'text-yellow-800' : 'text-red-800' %>">
+                              <% row_error[:corrections].each do |field, value| %>
+                                <li><%= field %>: <%= value %></li>
+                              <% end %>
+                            </ul>
+                          </div>
+                        <% end %>
+                        <% if row_error[:data] %>
+                          <div class="text-xs mt-2 p-2 bg-white rounded border <%= row_error[:auto_correctable] ? 'border-yellow-300' : 'border-red-200' %> <%= row_error[:auto_correctable] ? 'text-yellow-700' : 'text-red-700' %> font-mono">
+                            <strong>Row data:</strong> <%= row_error[:data].inspect %>
+                          </div>
+                        <% end %>
                       </div>
-                    <% end %>
+                    </div>
                   </div>
                 <% end %>
               </div>
@@ -100,7 +173,11 @@ Economy Shipping,US,,0,25,4.99,2.00</pre>
   </div>
 
   <!-- Upload Form -->
-  <%= form_with url: process_import_rate_tables_path, multipart: true, local: true, class: "space-y-6" do |form| %>
+  <%= form_with url: process_import_rate_tables_path, multipart: true, local: true, class: "space-y-6", id: "import-form" do |form| %>
+    <%= hidden_field_tag :apply_corrections, "false", id: "apply_corrections" %>
+    <% if session[:csv_import_file_path].present? %>
+      <%= hidden_field_tag :csv_import_file_path, session[:csv_import_file_path], id: "csv_import_file_path" %>
+    <% end %>
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-2">
         Select CSV File
@@ -164,6 +241,21 @@ Economy Shipping,CA,,0,25,6.99,3.00`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+// Confirm and apply auto-corrections
+function confirmAutoCorrections() {
+  // Set the apply_corrections flag and submit the form
+  document.getElementById('apply_corrections').value = 'true';
+  document.getElementById('import-form').submit();
+}
+
+// Dismiss toast notification
+function dismissToast() {
+  const toast = document.getElementById('auto-correct-toast');
+  if (toast) {
+    toast.style.display = 'none';
+  }
 }
 </script>
   </div>

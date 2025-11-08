@@ -121,6 +121,18 @@ if (!window.deleteListenersAdded) {
   function deleteShippingOption(deleteUrl) {
     const form = document.createElement('form');
     form.method = 'post';
+    
+    // Always extract DRI from current page URL to ensure it's included
+    // This prevents session from reverting to old DRI values
+    const urlParams = new URLSearchParams(window.location.search);
+    const dri = urlParams.get('dri');
+    
+    // Add DRI to deleteUrl if not already present
+    if (dri && !deleteUrl.includes('dri=')) {
+      const separator = deleteUrl.includes('?') ? '&' : '?';
+      deleteUrl = `${deleteUrl}${separator}dri=${encodeURIComponent(dri)}`;
+    }
+    
     form.action = deleteUrl;
 
     const methodField = document.createElement('input');
@@ -135,6 +147,15 @@ if (!window.deleteListenersAdded) {
     csrfField.name = 'authenticity_token';
     csrfField.value = csrfToken;
     form.appendChild(csrfField);
+
+    // Always include DRI as form field to ensure it's sent
+    if (dri) {
+      const driField = document.createElement('input');
+      driField.type = 'hidden';
+      driField.name = 'dri';
+      driField.value = dri;
+      form.appendChild(driField);
+    }
 
     document.body.appendChild(form);
     form.submit();

@@ -3,7 +3,6 @@ class RatesController < ApplicationController
 
   layout "application"
 
-  before_action :find_shipping_option, only: %i[create]
   before_action :find_rate, only: %i[edit update destroy]
 
   def index
@@ -66,25 +65,86 @@ class RatesController < ApplicationController
   end
 
   def process_import
-    unless params[:csv_file].present?
+    # If applying corrections, use stored file from temporary file
+    if params[:apply_corrections] == "true"
+      # Get file path from params (hidden field) or session
+      temp_file_path = params[:csv_import_file_path] || session[:csv_import_file_path]
+      Rails.logger.info "[CSV Import] Applying corrections - file path: #{temp_file_path.inspect}"
+      if temp_file_path.present? && File.exist?(temp_file_path)
+        # Read from temporary file
+        file_to_use = File.open(temp_file_path, "r")
+        Rails.logger.info "[CSV Import] File found and opened"
+        # Clean up after use
+        session.delete(:csv_import_file_path)
+      else
+        Rails.logger.warn "[CSV Import] File not found at path: #{temp_file_path.inspect}"
+        redirect_to import_rate_tables_path, alert: "CSV file data expired. Please upload the file again."
+        return
+      end
+    elsif params[:csv_file].present?
+      # Store file content in a temporary file for potential auto-correction
+      file_to_use = params[:csv_file]
+      if file_to_use.respond_to?(:read)
+        csv_content = file_to_use.read
+        file_to_use.rewind
+
+        # Create a temporary file to store the CSV content
+        temp_file = Tempfile.new([ "csv_import_#{session.id}_", ".csv" ], Rails.root.join("tmp"))
+        temp_file.write(csv_content)
+        temp_file.rewind
+        temp_file_path = temp_file.path
+        temp_file.close
+
+        # Store the file path in session (much smaller than the file content)
+        session[:csv_import_file_path] = temp_file_path
+        Rails.logger.info "[CSV Import] Stored CSV in temporary file: #{temp_file_path}"
+
+        # Reopen the file for the service to use
+        file_to_use = File.open(temp_file_path, "r")
+      end
+    else
       redirect_to import_rate_tables_path, alert: "Please select a CSV file to upload."
       return
     end
 
     service = RateCsvImportService.new(
       company: @company,
-      file: params[:csv_file]
+      file: file_to_use
     )
 
-    result = service.call
+    apply_corrections = params[:apply_corrections] == "true"
+    result = service.call(apply_corrections: apply_corrections)
 
     if result[:success]
+      # Clean up temporary file on success
+      if session[:csv_import_file_path].present? && File.exist?(session[:csv_import_file_path])
+        File.delete(session[:csv_import_file_path]) rescue nil
+        session.delete(:csv_import_file_path)
+      end
       flash[:notice] = result[:message]
+      # Set Turbo-Frame header to break out of frame
+      response.headers["Turbo-Frame"] = "_top"
       redirect_to rate_tables_path
     else
+      # Check if ALL errors are auto-correctable
+      all_auto_correctable = result[:row_errors].any? && result[:row_errors].all? { |e| e[:auto_correctable] }
+
       flash.now[:alert] = result[:message]
       flash.now[:errors] = result[:errors]
       flash.now[:row_errors] = result[:row_errors]
+      flash.now[:has_auto_correctable] = result[:row_errors].any? { |e| e[:auto_correctable] }
+      flash.now[:all_auto_correctable] = all_auto_correctable
+
+      # Build correction summary for toast
+      if all_auto_correctable
+        correction_summary = build_correction_summary(result[:row_errors])
+        flash.now[:correction_summary] = correction_summary
+      end
+
+      # Log session state to debug file path persistence
+      Rails.logger.info "[CSV Import] Session file path after errors: #{session[:csv_import_file_path].inspect}"
+      Rails.logger.info "[CSV Import] Session keys: #{session.keys.inspect}"
+
       render :import, status: :unprocessable_entity
     end
   end
@@ -136,11 +196,25 @@ class RatesController < ApplicationController
 
 private
 
-  def find_shipping_option
-    shipping_option_id = params[:shipping_option_id] || params.dig(:rate, :shipping_option_id)
-    @shipping_option = @company.shipping_options.find(shipping_option_id)
-  rescue ActiveRecord::RecordNotFound
-    redirect_to rate_tables_path, alert: "Shipping option not found."
+  def build_correction_summary(row_errors)
+    summary = []
+    row_errors.each do |error|
+      next unless error[:auto_correctable]
+
+      row_num = error[:row] || error[:row_number]
+      corrections = error[:corrections] || {}
+
+      corrections.each do |field, corrected_value|
+        original_value = error[:data]&.dig(field.to_sym) || error[:data]&.dig(field.to_s) || "N/A"
+        summary << {
+          row: row_num,
+          field: field,
+          original: original_value,
+          corrected: corrected_value,
+        }
+      end
+    end
+    summary
   end
 
   def find_rate
