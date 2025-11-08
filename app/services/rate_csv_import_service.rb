@@ -1,17 +1,18 @@
 require "csv"
 
 class RateCsvImportService
-  attr_reader :company, :file, :errors, :success_count, :row_errors
+  attr_reader :company, :file, :errors, :success_count, :row_errors, :auto_correctable_errors
 
   def initialize(company:, file:)
     @company = company
     @file = file
     @errors = []
     @row_errors = []
+    @auto_correctable_errors = []
     @success_count = 0
   end
 
-  def call
+  def call(apply_corrections: false)
     return failure("No file provided") unless file.present?
     return failure("Invalid file type. Please upload a CSV file.") unless valid_file_type?
 
@@ -21,9 +22,26 @@ class RateCsvImportService
     validate_headers(csv_data)
     return failure("Invalid CSV headers") if errors.any?
 
-    import_rates(csv_data)
+    # If applying corrections, modify the CSV data first
+    if apply_corrections
+      csv_data = apply_auto_corrections(csv_data)
+      # Clear row_errors since we've applied corrections
+      @row_errors = []
+    end
 
-    if @row_errors.any?
+    import_rates(csv_data, apply_corrections: apply_corrections)
+
+    # If applying corrections, only fail if there are non-correctable errors
+    if apply_corrections
+      non_correctable_errors = @row_errors.reject { |e| e[:auto_correctable] }
+      if non_correctable_errors.any?
+        failure("Import failed: #{non_correctable_errors.count} row(s) have errors that cannot be auto-corrected.")
+      elsif @success_count > 0
+        success
+      else
+        failure("No rates were imported")
+      end
+    elsif @row_errors.any?
       failure("Import failed: #{@row_errors.count} row(s) have errors. No records were imported.")
     elsif @success_count > 0
       success
@@ -60,6 +78,8 @@ private
 
   def read_csv_file
     content = file.respond_to?(:read) ? file.read : File.read(file.path)
+    # Store original content for re-reading when applying corrections
+    @csv_content = content
     CSV.parse(content, headers: true, header_converters: :symbol)
   rescue CSV::MalformedCSVError => e
     @errors << "Malformed CSV file: #{e.message}"
@@ -78,7 +98,7 @@ private
     end
   end
 
-  def import_rates(csv_data)
+  def import_rates(csv_data, apply_corrections: false)
     # Pre-scan CSV to create missing shipping options
     ensure_shipping_options_exist(csv_data)
 
@@ -93,7 +113,7 @@ private
       row = row_data[:row]
 
       begin
-        rate, error = validate_rate_row(row, row_number, validated_rates)
+        rate, error = validate_rate_row(row, row_number, validated_rates, apply_corrections: apply_corrections)
         if error
           @row_errors << error
         elsif rate
@@ -105,7 +125,15 @@ private
     end
 
     # If any errors, don't import anything
-    return if @row_errors.any?
+    # (When apply_corrections is true, auto-correctable errors are already fixed)
+    # But we still need to check for non-correctable errors
+    if @row_errors.any?
+      Rails.logger.warn "[CSV Import] Found #{@row_errors.count} errors after validation"
+      @row_errors.each do |error|
+        Rails.logger.warn "[CSV Import] Row #{error[:row]}: #{error[:errors].join(', ')}"
+      end
+      return
+    end
 
     # Second pass: All validations passed, save all records in a transaction
     ActiveRecord::Base.transaction do
@@ -116,7 +144,47 @@ private
     end
   end
 
-  def validate_rate_row(row, row_number, validated_rates_in_batch = [])
+  # Apply auto-corrections to CSV data based on validation errors
+  def apply_auto_corrections(csv_data)
+    # First, validate to find all corrections needed
+    corrections_map = {}
+
+    csv_data.each_with_index do |row, index|
+      next if row.to_h.values.all?(&:blank?)
+
+      validation_result = validate_numeric_values(row, index + 2)
+      if validation_result[:auto_correctable] && validation_result[:corrections].any?
+        corrections_map[index] = validation_result[:corrections]
+        Rails.logger.info "[CSV Import] Row #{index + 2} corrections: #{validation_result[:corrections].inspect}"
+      end
+    end
+
+    # Apply corrections to the CSV data
+    corrected_rows = []
+    csv_data.each_with_index do |row, index|
+      if corrections_map[index]
+        corrected_row = row.to_h.dup
+        corrections_map[index].each do |field, corrected_value|
+          # Update the field value - ensure it's a string for CSV::Row
+          corrected_row[field.to_sym] = corrected_value.to_s
+          Rails.logger.info "[CSV Import] Row #{index + 2} corrected #{field}: " \
+                            "#{row[field.to_sym]} -> #{corrected_value}"
+        end
+        # Convert back to CSV::Row maintaining header order
+        row_values = csv_data.headers.map { |h| corrected_row[h.to_sym] }
+        corrected_rows << CSV::Row.new(csv_data.headers, row_values)
+      else
+        corrected_rows << row
+      end
+    end
+
+    # Create a new CSV table with corrected rows
+    corrected_table = CSV::Table.new(corrected_rows)
+    Rails.logger.info "[CSV Import] Applied corrections to #{corrections_map.size} row(s)"
+    corrected_table
+  end
+
+  def validate_rate_row(row, row_number, validated_rates_in_batch = [], apply_corrections: false)
     # Skip empty rows
     return [ nil, nil ] if row.to_h.values.all?(&:blank?)
 
@@ -132,6 +200,21 @@ private
     region_value = row[:region]
     region_value = region_value.strip if region_value.is_a?(String)
     region_value = nil if region_value.blank?
+
+    # Validate numeric values against database constraints before creating the rate
+    # Skip validation if corrections were already applied (values should already be correct)
+    unless apply_corrections
+      validation_result = validate_numeric_values(row, row_number)
+      if validation_result[:errors].any?
+        return [ nil, {
+          row: row_number,
+          errors: validation_result[:errors],
+          data: row.to_h,
+          auto_correctable: validation_result[:auto_correctable],
+          corrections: validation_result[:corrections],
+        }, ]
+      end
+    end
 
     rate = shipping_option.rates.new(
       country: row[:country]&.strip&.upcase,
@@ -293,6 +376,76 @@ private
     return nil if name.blank?
 
     company.shipping_options.find_by(name: name.strip)
+  end
+
+  # Validate numeric values against database constraints
+  # min_range_lbs and max_range_lbs: precision 8, scale 4 (max: 9999.9999)
+  # flat_rate and min_charge: precision 10, scale 2 (max: 99999999.99)
+  # Returns hash with errors, auto_correctable flag, and corrections
+  def validate_numeric_values(row, row_number)
+    errors = []
+    corrections = {}
+    auto_correctable = false
+
+    # Validate min_range_lbs and max_range_lbs (precision 8, scale 4)
+    max_weight_value = BigDecimal("9999.9999")
+    min_weight_value = BigDecimal("-9999.9999")
+
+    min_range = BigDecimal(row[:min_range_lbs].to_s)
+    if min_range > max_weight_value
+      auto_correctable = true
+      corrections[:min_range_lbs] = max_weight_value.to_s
+      errors << "min_range_lbs (#{min_range}) exceeds maximum allowed value of 9999.9999 " \
+                "(can be auto-corrected to #{max_weight_value})"
+    elsif min_range < min_weight_value
+      errors << "min_range_lbs (#{min_range}) is below minimum allowed value of #{min_weight_value}"
+    end
+
+    max_range = BigDecimal(row[:max_range_lbs].to_s)
+    if max_range > max_weight_value
+      auto_correctable = true
+      corrections[:max_range_lbs] = max_weight_value.to_s
+      errors << "max_range_lbs (#{max_range}) exceeds maximum allowed value of 9999.9999 " \
+                "(can be auto-corrected to #{max_weight_value})"
+    elsif max_range < min_weight_value
+      errors << "max_range_lbs (#{max_range}) is below minimum allowed value of #{min_weight_value}"
+    end
+
+    # Validate flat_rate and min_charge (precision 10, scale 2)
+    max_price_value = BigDecimal("99999999.99")
+    min_price_value = BigDecimal("-99999999.99")
+
+    flat_rate = BigDecimal(row[:flat_rate].to_s)
+    if flat_rate > max_price_value
+      auto_correctable = true
+      corrections[:flat_rate] = max_price_value.to_s
+      errors << "flat_rate (#{flat_rate}) exceeds maximum allowed value of 99999999.99 " \
+                "(can be auto-corrected to #{max_price_value})"
+    elsif flat_rate < min_price_value
+      errors << "flat_rate (#{flat_rate}) is below minimum allowed value of #{min_price_value}"
+    end
+
+    min_charge = BigDecimal(row[:min_charge].to_s)
+    if min_charge > max_price_value
+      auto_correctable = true
+      corrections[:min_charge] = max_price_value.to_s
+      errors << "min_charge (#{min_charge}) exceeds maximum allowed value of 99999999.99 " \
+                "(can be auto-corrected to #{max_price_value})"
+    elsif min_charge < min_price_value
+      errors << "min_charge (#{min_charge}) is below minimum allowed value of #{min_price_value}"
+    end
+
+    {
+      errors: errors,
+      auto_correctable: auto_correctable,
+      corrections: corrections,
+    }
+  rescue ArgumentError, TypeError => e
+    {
+      errors: [ "Invalid numeric value: #{e.message}" ],
+      auto_correctable: false,
+      corrections: {},
+    }
   end
 
   def success

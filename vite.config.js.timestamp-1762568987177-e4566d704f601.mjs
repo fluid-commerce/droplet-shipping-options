@@ -1,0 +1,16 @@
+// vite.config.js
+import { defineConfig } from "file:///home/jbliss/source/droplet-shipping-options/node_modules/vite/dist/node/index.js";
+import RubyPlugin from "file:///home/jbliss/source/droplet-shipping-options/node_modules/vite-plugin-ruby/dist/index.js";
+import tailwindcss from "file:///home/jbliss/source/droplet-shipping-options/node_modules/@tailwindcss/vite/dist/index.mjs";
+import FullReload from "file:///home/jbliss/source/droplet-shipping-options/node_modules/vite-plugin-full-reload/dist/index.js";
+var vite_config_default = defineConfig({
+  plugins: [
+    RubyPlugin(),
+    tailwindcss(),
+    FullReload(["config/routes.rb", "app/views/**/*", "app/frontend/**/*"])
+  ]
+});
+export {
+  vite_config_default as default
+};
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKICAic291cmNlcyI6IFsidml0ZS5jb25maWcuanMiXSwKICAic291cmNlc0NvbnRlbnQiOiBbImNvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9kaXJuYW1lID0gXCIvaG9tZS9qYmxpc3Mvc291cmNlL2Ryb3BsZXQtc2hpcHBpbmctb3B0aW9uc1wiO2NvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9maWxlbmFtZSA9IFwiL2hvbWUvamJsaXNzL3NvdXJjZS9kcm9wbGV0LXNoaXBwaW5nLW9wdGlvbnMvdml0ZS5jb25maWcuanNcIjtjb25zdCBfX3ZpdGVfaW5qZWN0ZWRfb3JpZ2luYWxfaW1wb3J0X21ldGFfdXJsID0gXCJmaWxlOi8vL2hvbWUvamJsaXNzL3NvdXJjZS9kcm9wbGV0LXNoaXBwaW5nLW9wdGlvbnMvdml0ZS5jb25maWcuanNcIjtpbXBvcnQgeyBkZWZpbmVDb25maWcgfSBmcm9tICd2aXRlJ1xuaW1wb3J0IFJ1YnlQbHVnaW4gZnJvbSAndml0ZS1wbHVnaW4tcnVieSdcbmltcG9ydCB0YWlsd2luZGNzcyBmcm9tICdAdGFpbHdpbmRjc3Mvdml0ZSdcbmltcG9ydCBGdWxsUmVsb2FkIGZyb20gJ3ZpdGUtcGx1Z2luLWZ1bGwtcmVsb2FkJ1xuXG5leHBvcnQgZGVmYXVsdCBkZWZpbmVDb25maWcoe1xuICBwbHVnaW5zOiBbXG4gICAgUnVieVBsdWdpbigpLFxuICAgIHRhaWx3aW5kY3NzKCksXG4gICAgRnVsbFJlbG9hZChbJ2NvbmZpZy9yb3V0ZXMucmInLCAnYXBwL3ZpZXdzLyoqLyonLCAnYXBwL2Zyb250ZW5kLyoqLyonXSksXG4gIF1cbn0pXG4iXSwKICAibWFwcGluZ3MiOiAiO0FBQXNULFNBQVMsb0JBQW9CO0FBQ25WLE9BQU8sZ0JBQWdCO0FBQ3ZCLE9BQU8saUJBQWlCO0FBQ3hCLE9BQU8sZ0JBQWdCO0FBRXZCLElBQU8sc0JBQVEsYUFBYTtBQUFBLEVBQzFCLFNBQVM7QUFBQSxJQUNQLFdBQVc7QUFBQSxJQUNYLFlBQVk7QUFBQSxJQUNaLFdBQVcsQ0FBQyxvQkFBb0Isa0JBQWtCLG1CQUFtQixDQUFDO0FBQUEsRUFDeEU7QUFDRixDQUFDOyIsCiAgIm5hbWVzIjogW10KfQo=

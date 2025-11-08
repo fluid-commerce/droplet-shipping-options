@@ -11,4 +11,18 @@ module ApplicationHelper
 
     formatted_values.join(", ").html_safe
   end
+
+  # Override url_for to automatically include DRI parameter when available
+  def url_for(options = nil)
+    url = super(options)
+    return url unless url.is_a?(String)
+
+    # Add DRI parameter if it exists in session and not already in URL
+    if session[:dri].present? && !url.include?("dri=")
+      separator = url.include?("?") ? "&" : "?"
+      url = "#{url}#{separator}dri=#{CGI.escape(session[:dri])}"
+    end
+
+    url
+  end
 end

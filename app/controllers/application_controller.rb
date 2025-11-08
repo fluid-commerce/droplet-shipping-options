@@ -16,6 +16,29 @@ protected
     @current_ability ||= Ability.new(user: current_user)
   end
 
+  # Override redirect_to to automatically include DRI parameter when available
+  # This ensures all redirects maintain the DRI parameter for iframe compatibility
+  def redirect_to(options = {}, response_status = {})
+    # Get DRI from session or params if available
+    dri = session[:dri] || params[:dri]
+
+    # If DRI is available, add it to the redirect options
+    if dri.present?
+      if options.is_a?(Hash)
+        # For hash options (e.g., { controller: 'foo', action: 'bar' })
+        options[:dri] ||= dri
+      elsif options.is_a?(String)
+        # For string URLs (including path helpers), append DRI parameter if not already present
+        unless options.include?("dri=")
+          separator = options.include?("?") ? "&" : "?"
+          options = "#{options}#{separator}dri=#{CGI.escape(dri)}"
+        end
+      end
+    end
+
+    super(options, response_status)
+  end
+
 private
 
   def log_session_info

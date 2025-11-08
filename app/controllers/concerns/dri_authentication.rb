@@ -24,6 +24,9 @@ private
       session[:dri] = dri
       Rails.logger.info "[DRI] Stored new DRI in session: #{dri}"
     elsif session[:dri].blank?
+      Rails.logger.warn "[DRI] Missing DRI - params[:dri]: #{params[:dri].inspect}, " \
+                        "session[:dri]: #{session[:dri].inspect}, session_id: #{session.id}, " \
+                        "request_path: #{request.path}"
       render_dri_error(
         message: "DRI parameter is required",
         code: "DRI_REQUIRED",
