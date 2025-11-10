@@ -55,6 +55,10 @@ private
     company = get_company
     installed_callback_ids = []
 
+    # Clean up any existing callbacks before registering new ones
+    # This prevents duplicates when reinstalling
+    cleanup_existing_callbacks(company)
+
     # Always register the shipping options callback - required for droplet functionality
     base_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-106074092699.europe-west1.run.app")
     required_callback = {
@@ -123,5 +127,26 @@ private
         "[DropletInstalledJob] Updated company with #{installed_callback_ids.length} callback IDs"
       )
     end
+  end
+
+  def cleanup_existing_callbacks(company)
+    # Delete any existing callbacks stored in the database
+    return unless company.installed_callback_ids.present?
+
+    client = FluidClient.new
+    company.installed_callback_ids.each do |callback_id|
+      begin
+        client.callback_registrations.delete(callback_id)
+        Rails.logger.info(
+          "[DropletInstalledJob] Cleaned up existing callback: #{callback_id}"
+        )
+      rescue => e
+        # Log but don't fail - callback might already be deleted
+        Rails.logger.warn(
+          "[DropletInstalledJob] Could not delete existing callback #{callback_id}: #{e.message}"
+        )
+      end
+    end
+    company.update(installed_callback_ids: [])
   end
 end

@@ -64,6 +64,10 @@ private
       return
     end
 
+    # Clean up any existing callbacks before registering new ones
+    # This prevents duplicates when reinstalling
+    cleanup_existing_callbacks(company, installation_token)
+
     # Create a client with the installation token instead of company token
     client = FluidClient.new
 
@@ -114,5 +118,26 @@ private
     )
     Rails.logger.error(e.backtrace.join("\n"))
     raise e
+  end
+
+  def cleanup_existing_callbacks(company, installation_token)
+    # Delete any existing callbacks stored in the database
+    if company.installed_callback_ids.present?
+      client = FluidClient.new
+      company.installed_callback_ids.each do |callback_id|
+        begin
+          client.callback_registrations.delete(callback_id)
+          Rails.logger.info(
+            "[DropletInstallationService] Cleaned up existing callback: #{callback_id}"
+          )
+        rescue => e
+          # Log but don't fail - callback might already be deleted
+          Rails.logger.warn(
+            "[DropletInstallationService] Could not delete existing callback #{callback_id}: #{e.message}"
+          )
+        end
+      end
+      company.update(installed_callback_ids: [])
+    end
   end
 end
