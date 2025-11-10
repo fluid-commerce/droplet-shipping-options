@@ -45,14 +45,13 @@ class DropletInstalledJob < WebhookEventJob
       return
     end
 
-    register_active_callbacks
+    register_active_callbacks(company)
   end
 
 private
 
-  def register_active_callbacks
+  def register_active_callbacks(company)
     client = FluidClient.new
-    company = get_company
     installed_callback_ids = []
 
     # Clean up any existing callbacks before registering new ones
