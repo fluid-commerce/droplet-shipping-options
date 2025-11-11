@@ -71,7 +71,7 @@ class RatesController < ApplicationController
       # :brakeman:ignore FileAccess
       raw_file_path = params[:csv_import_file_path] || session[:csv_import_file_path]
       Rails.logger.info "[CSV Import] Applying corrections - file path: #{raw_file_path.inspect}"
-      
+
       # Validate and sanitize file path to prevent directory traversal attacks
       # This validation ensures the path is safe before any file operations
       unless raw_file_path.present? && valid_temp_file_path?(raw_file_path)
@@ -79,10 +79,10 @@ class RatesController < ApplicationController
         redirect_to import_rate_tables_path, alert: "CSV file data expired. Please upload the file again."
         return
       end
-      
+
       # Use validated path (sanitized and confirmed safe)
       temp_file_path = File.expand_path(raw_file_path, Rails.root.join("tmp"))
-      
+
       if File.exist?(temp_file_path)
         # Read from temporary file - path has been validated and sanitized
         # :brakeman:ignore FileAccess
@@ -270,18 +270,18 @@ params[:shipping_method].to_i if params[:shipping_method].present? && params[:sh
     # Convert to absolute path and ensure it's within the tmp directory
     tmp_dir = Rails.root.join("tmp").to_s
     expanded_path = File.expand_path(file_path)
-    
+
     # Check that the path is within the tmp directory
     return false unless expanded_path.start_with?(tmp_dir)
-    
+
     # Check for directory traversal attempts
     return false if file_path.include?("..")
     return false if file_path.include?("~")
-    
+
     # Validate filename pattern matches expected format (csv_import_*.csv)
     filename = File.basename(file_path)
     return false unless filename.match?(/\Acsv_import_.*\.csv\z/)
-    
+
     true
   end
 end
