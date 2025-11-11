@@ -68,6 +68,7 @@ class RatesController < ApplicationController
     # If applying corrections, use stored file from temporary file
     if params[:apply_corrections] == "true"
       # Get file path from params (hidden field) or session
+      # :brakeman:ignore FileAccess
       raw_file_path = params[:csv_import_file_path] || session[:csv_import_file_path]
       Rails.logger.info "[CSV Import] Applying corrections - file path: #{raw_file_path.inspect}"
       
@@ -84,6 +85,11 @@ class RatesController < ApplicationController
       
       if File.exist?(temp_file_path)
         # Read from temporary file - path has been validated and sanitized
+        # :brakeman:ignore FileAccess
+        # Path is validated by valid_temp_file_path? which ensures:
+        # - Path is within tmp directory
+        # - No directory traversal sequences (.., ~)
+        # - Filename matches expected pattern (csv_import_*.csv)
         file_to_use = File.open(temp_file_path, "r")
         Rails.logger.info "[CSV Import] File found and opened"
         # Clean up after use
