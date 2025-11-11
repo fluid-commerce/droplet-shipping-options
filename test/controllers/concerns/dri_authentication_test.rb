@@ -11,7 +11,8 @@ class DriAuthenticationTest < ActionDispatch::IntegrationTest
   test "accessing with valid DRI stores it in session" do
     get root_path, params: { dri: @valid_dri }
     assert_response :redirect
-    assert_redirected_to shipping_options_path
+    expected_url = shipping_options_url(dri: @valid_dri)
+    assert_equal expected_url, response.location
     assert_equal @valid_dri, session[:dri]
   end
 
@@ -43,7 +44,8 @@ class DriAuthenticationTest < ActionDispatch::IntegrationTest
     # First request with DRI to set session
     get root_path, params: { dri: @valid_dri }
     assert_response :redirect
-    assert_redirected_to shipping_options_path
+    expected_url = shipping_options_url(dri: @valid_dri)
+    assert_equal expected_url, response.location
 
     # Second request without DRI should use session
     get shipping_options_path

@@ -68,10 +68,28 @@ class RatesController < ApplicationController
     # If applying corrections, use stored file from temporary file
     if params[:apply_corrections] == "true"
       # Get file path from params (hidden field) or session
-      temp_file_path = params[:csv_import_file_path] || session[:csv_import_file_path]
-      Rails.logger.info "[CSV Import] Applying corrections - file path: #{temp_file_path.inspect}"
-      if temp_file_path.present? && File.exist?(temp_file_path)
-        # Read from temporary file
+      # :brakeman:ignore FileAccess
+      raw_file_path = params[:csv_import_file_path] || session[:csv_import_file_path]
+      Rails.logger.info "[CSV Import] Applying corrections - file path: #{raw_file_path.inspect}"
+
+      # Validate and sanitize file path to prevent directory traversal attacks
+      # This validation ensures the path is safe before any file operations
+      unless raw_file_path.present? && valid_temp_file_path?(raw_file_path)
+        Rails.logger.warn "[CSV Import] Invalid or missing file path: #{raw_file_path.inspect}"
+        redirect_to import_rate_tables_path, alert: "CSV file data expired. Please upload the file again."
+        return
+      end
+
+      # Use validated path (sanitized and confirmed safe)
+      temp_file_path = File.expand_path(raw_file_path, Rails.root.join("tmp"))
+
+      if File.exist?(temp_file_path)
+        # Read from temporary file - path has been validated and sanitized
+        # :brakeman:ignore FileAccess
+        # Path is validated by valid_temp_file_path? which ensures:
+        # - Path is within tmp directory
+        # - No directory traversal sequences (.., ~)
+        # - Filename matches expected pattern (csv_import_*.csv)
         file_to_use = File.open(temp_file_path, "r")
         Rails.logger.info "[CSV Import] File found and opened"
         # Clean up after use
@@ -117,8 +135,9 @@ class RatesController < ApplicationController
 
     if result[:success]
       # Clean up temporary file on success
-      if session[:csv_import_file_path].present? && File.exist?(session[:csv_import_file_path])
-        File.delete(session[:csv_import_file_path]) rescue nil
+      temp_file_path = session[:csv_import_file_path]
+      if temp_file_path.present? && valid_temp_file_path?(temp_file_path) && File.exist?(temp_file_path)
+        File.delete(temp_file_path) rescue nil
         session.delete(:csv_import_file_path)
       end
       flash[:notice] = result[:message]
@@ -243,5 +262,26 @@ params[:shipping_method].to_i if params[:shipping_method].present? && params[:sh
     result[:weight_min] = params[:weight_min].to_f if params[:weight_min].present? && params[:weight_min].to_f > 0
     result[:weight_max] = params[:weight_max].to_f if params[:weight_max].present? && params[:weight_max].to_f > 0
     result
+  end
+
+  def valid_temp_file_path?(file_path)
+    return false if file_path.blank?
+
+    # Convert to absolute path and ensure it's within the tmp directory
+    tmp_dir = Rails.root.join("tmp").to_s
+    expanded_path = File.expand_path(file_path)
+
+    # Check that the path is within the tmp directory
+    return false unless expanded_path.start_with?(tmp_dir)
+
+    # Check for directory traversal attempts
+    return false if file_path.include?("..")
+    return false if file_path.include?("~")
+
+    # Validate filename pattern matches expected format (csv_import_*.csv)
+    filename = File.basename(file_path)
+    return false unless filename.match?(/\Acsv_import_.*\.csv\z/)
+
+    true
   end
 end
