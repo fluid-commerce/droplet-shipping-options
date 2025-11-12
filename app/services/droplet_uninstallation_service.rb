@@ -51,31 +51,6 @@ private
   end
 
   def delete_installed_callbacks(company)
-    # Skip callback deletion in test environment
-    return if Rails.env.test?
-
-    # Use stored callback IDs to ensure we delete exactly what we registered
-    return unless company.installed_callback_ids.present?
-
-    client = FluidClient.new
-    deleted_count = 0
-
-    company.installed_callback_ids.each do |callback_id|
-      begin
-        client.callback_registrations.delete(callback_id)
-        deleted_count += 1
-        Rails.logger.info("[DropletUninstallationService] Deleted callback: #{callback_id}")
-      rescue => e
-        Rails.logger.error(
-          "[DropletUninstallationService] Failed to delete callback #{callback_id}: #{e.message}"
-        )
-      end
-    end
-
-    Rails.logger.info(
-      "[DropletUninstallationService] Deleted #{deleted_count} callback(s)"
-    )
-
-    company.update(installed_callback_ids: [])
+    CallbackCleanupService.new(company).call
   end
 end

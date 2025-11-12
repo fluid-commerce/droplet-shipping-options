@@ -27,18 +27,6 @@ class DropletUninstalledJob < WebhookEventJob
 private
 
   def delete_installed_callbacks(company)
-    return unless company.installed_callback_ids.present?
-
-    client = FluidClient.new
-
-    company.installed_callback_ids.each do |callback_id|
-      begin
-        client.callback_registrations.delete(callback_id)
-      rescue => e
-        Rails.logger.error("[DropletUninstalledJob] Failed to delete callback #{callback_id}: #{e.message}")
-      end
-    end
-
-    company.update(installed_callback_ids: [])
+    CallbackCleanupService.new(company).call
   end
 end
