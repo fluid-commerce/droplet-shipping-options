@@ -7,6 +7,7 @@ describe HomeController do
     company = companies(:acme)
     get root_url, params: { dri: company.droplet_installation_uuid }
     must_respond_with :redirect
-    must_redirect_to shipping_options_path
+    expected_url = shipping_options_url(dri: company.droplet_installation_uuid)
+    assert_equal expected_url, response.location
   end
 end
