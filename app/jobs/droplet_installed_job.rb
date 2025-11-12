@@ -45,15 +45,19 @@ class DropletInstalledJob < WebhookEventJob
       return
     end
 
-    register_active_callbacks
+    register_active_callbacks(company)
   end
 
 private
 
-  def register_active_callbacks
+  def register_active_callbacks(company)
     client = FluidClient.new
-    company = get_company
     installed_callback_ids = []
+
+    # Clean up any existing callbacks before registering new ones
+    # This is a defensive measure: if the previous uninstall failed or wasn't triggered,
+    # old callbacks would remain and cause duplicates on reinstall
+    CallbackCleanupService.new(company).call
 
     # Always register the shipping options callback - required for droplet functionality
     base_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-106074092699.europe-west1.run.app")
