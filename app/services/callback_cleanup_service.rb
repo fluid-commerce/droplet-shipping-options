@@ -6,16 +6,42 @@ class CallbackCleanupService
   def call
     # Skip API calls in test environment, but still clear the stored IDs
     unless Rails.env.test?
-      client = FluidClient.new
+      # CRITICAL: Must use the installation token, not the company token
+      # Callbacks are registered per-droplet-installation, so we need the
+      # authentication_token (droplet installation token) to see/delete them
+      installation_token = @company.authentication_token
+      unless installation_token
+        Rails.logger.warn(
+          "[CallbackCleanupService] No installation token for #{@company.fluid_shop}, " \
+          "skipping API cleanup"
+        )
+        @company.update(installed_callback_ids: [])
+        return
+      end
+
       deleted_count = 0
+      base_url = Setting.fluid_api.base_url
 
       # First, delete callbacks tracked in the company record
       if @company.installed_callback_ids.present?
         @company.installed_callback_ids.each do |callback_id|
           begin
-            client.callback_registrations.delete(callback_id)
-            deleted_count += 1
-            Rails.logger.info("[CallbackCleanupService] Deleted tracked callback: #{callback_id}")
+            response = HTTParty.delete(
+              "#{base_url}/api/callback/registrations/#{callback_id}",
+              headers: {
+                "Authorization" => "Bearer #{installation_token}",
+                "Content-Type" => "application/json",
+              }
+            )
+            if response.code == 200 || response.code == 204
+              deleted_count += 1
+              Rails.logger.info("[CallbackCleanupService] Deleted tracked callback: #{callback_id}")
+            else
+              Rails.logger.warn(
+                "[CallbackCleanupService] Could not delete tracked callback #{callback_id}: " \
+                "#{response.code} - #{response.body}"
+              )
+            end
           rescue => e
             # Log but don't fail - callback might already be deleted
             Rails.logger.warn(
@@ -28,12 +54,20 @@ class CallbackCleanupService
       # Second, fetch and delete any orphaned callbacks for this definition
       # This handles cases where callbacks were created but not tracked
       begin
-        base_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-106074092699.europe-west1.run.app")
-        expected_callback_url = "#{base_url}/callbacks/shipping_options"
+        droplet_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-106074092699.europe-west1.run.app")
+        expected_callback_url = "#{droplet_url}/callbacks/shipping_options"
 
-        response = client.callback_registrations.get(definition_name: "update_cart_shipping")
-        if response && response["callback_registrations"]
-          response["callback_registrations"].each do |reg|
+        # Fetch all callback registrations for this definition
+        list_response = HTTParty.get(
+          "#{base_url}/api/callback/registrations?definition_name=update_cart_shipping",
+          headers: {
+            "Authorization" => "Bearer #{installation_token}",
+            "Content-Type" => "application/json",
+          }
+        )
+
+        if list_response.code == 200 && list_response["callback_registrations"]
+          list_response["callback_registrations"].each do |reg|
             callback_uuid = reg["uuid"]
             callback_url = reg["url"]
 
@@ -51,17 +85,34 @@ class CallbackCleanupService
             end
 
             begin
-              client.callback_registrations.delete(callback_uuid)
-              deleted_count += 1
-              Rails.logger.info(
-                "[CallbackCleanupService] Deleted orphaned callback: #{callback_uuid}"
+              delete_response = HTTParty.delete(
+                "#{base_url}/api/callback/registrations/#{callback_uuid}",
+                headers: {
+                  "Authorization" => "Bearer #{installation_token}",
+                  "Content-Type" => "application/json",
+                }
               )
+              if delete_response.code == 200 || delete_response.code == 204
+                deleted_count += 1
+                Rails.logger.info(
+                  "[CallbackCleanupService] Deleted orphaned callback: #{callback_uuid}"
+                )
+              else
+                Rails.logger.warn(
+                  "[CallbackCleanupService] Could not delete orphaned callback #{callback_uuid}: " \
+                  "#{delete_response.code} - #{delete_response.body}"
+                )
+              end
             rescue => e
               Rails.logger.warn(
                 "[CallbackCleanupService] Could not delete orphaned callback #{callback_uuid}: #{e.message}"
               )
             end
           end
+        else
+          Rails.logger.info(
+            "[CallbackCleanupService] No callbacks found or error fetching: #{list_response.code}"
+          )
         end
       rescue => e
         Rails.logger.warn(
