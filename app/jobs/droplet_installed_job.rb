@@ -51,8 +51,17 @@ class DropletInstalledJob < WebhookEventJob
 private
 
   def register_active_callbacks(company)
-    client = FluidClient.new
     installed_callback_ids = []
+
+    # CRITICAL: Must use the installation token for callback operations
+    installation_token = company.authentication_token
+    unless installation_token
+      Rails.logger.error(
+        "[DropletInstalledJob] No installation token for #{company.fluid_shop}, " \
+        "cannot register callbacks"
+      )
+      return
+    end
 
     # Clean up any existing callbacks before registering new ones
     # This is a defensive measure: if the previous uninstall failed or wasn't triggered,
@@ -60,10 +69,11 @@ private
     CallbackCleanupService.new(company).call
 
     # Always register the shipping options callback - required for droplet functionality
-    base_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-106074092699.europe-west1.run.app")
+    droplet_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-106074092699.europe-west1.run.app")
+    api_base_url = Setting.fluid_api.base_url
     required_callback = {
       definition_name: "update_cart_shipping",
-      url: "#{base_url}/callbacks/shipping_options",
+      url: "#{droplet_url}/callbacks/shipping_options",
       timeout_in_seconds: 10,
       active: true,
     }
@@ -75,17 +85,31 @@ private
       )
 
       # Check if a callback with this definition already exists (should be prevented by cleanup, but extra safety)
-      existing_callbacks = client.callback_registrations.get(definition_name: required_callback[:definition_name])
-      if existing_callbacks && existing_callbacks["callback_registrations"]&.any?
+      check_response = HTTParty.get(
+        "#{api_base_url}/api/callback/registrations?definition_name=#{required_callback[:definition_name]}",
+        headers: {
+          "Authorization" => "Bearer #{installation_token}",
+          "Content-Type" => "application/json",
+        }
+      )
+      if check_response.code == 200 && check_response["callback_registrations"]&.any?
         Rails.logger.warn(
-          "[DropletInstalledJob] Found #{existing_callbacks['callback_registrations'].length} " \
+          "[DropletInstalledJob] Found #{check_response['callback_registrations'].length} " \
           "existing callback(s) for #{required_callback[:definition_name]} after cleanup. " \
           "This should not happen - possible race condition or cleanup failure."
         )
       end
 
-      response = client.callback_registrations.create(required_callback)
-      if response && response["callback_registration"]["uuid"]
+      response = HTTParty.post(
+        "#{api_base_url}/api/callback/registrations",
+        headers: {
+          "Authorization" => "Bearer #{installation_token}",
+          "Content-Type" => "application/json",
+        },
+        body: { callback_registration: required_callback }.to_json
+      )
+
+      if (response.code == 200 || response.code == 201) && response["callback_registration"]["uuid"]
         installed_callback_ids << response["callback_registration"]["uuid"]
         Rails.logger.info(
           "[DropletInstalledJob] Successfully registered callback with UUID: " \
@@ -94,7 +118,7 @@ private
       else
         Rails.logger.warn(
           "[DropletInstalledJob] Callback registered but no UUID returned for: " \
-          "#{required_callback[:definition_name]}"
+          "#{required_callback[:definition_name]} - Response: #{response.code}"
         )
       end
     rescue => e
@@ -116,12 +140,21 @@ private
           active: true,
         }
 
-        response = client.callback_registrations.create(callback_attributes)
-        if response && response["callback_registration"]["uuid"]
+        response = HTTParty.post(
+          "#{api_base_url}/api/callback/registrations",
+          headers: {
+            "Authorization" => "Bearer #{installation_token}",
+            "Content-Type" => "application/json",
+          },
+          body: { callback_registration: callback_attributes }.to_json
+        )
+
+        if (response.code == 200 || response.code == 201) && response["callback_registration"]["uuid"]
           installed_callback_ids << response["callback_registration"]["uuid"]
         else
           Rails.logger.warn(
-            "[DropletInstalledJob] Callback registered but no UUID returned for: #{callback.name}"
+            "[DropletInstalledJob] Callback registered but no UUID returned for: #{callback.name} - " \
+            "Response: #{response.code}"
           )
         end
       rescue => e
