@@ -74,6 +74,16 @@ private
         "#{required_callback[:definition_name]} at #{required_callback[:url]}"
       )
 
+      # Check if a callback with this definition already exists (should be prevented by cleanup, but extra safety)
+      existing_callbacks = client.callback_registrations.get(definition_name: required_callback[:definition_name])
+      if existing_callbacks && existing_callbacks["callback_registrations"]&.any?
+        Rails.logger.warn(
+          "[DropletInstalledJob] Found #{existing_callbacks['callback_registrations'].length} " \
+          "existing callback(s) for #{required_callback[:definition_name]} after cleanup. " \
+          "This should not happen - possible race condition or cleanup failure."
+        )
+      end
+
       response = client.callback_registrations.create(required_callback)
       if response && response["callback_registration"]["uuid"]
         installed_callback_ids << response["callback_registration"]["uuid"]
