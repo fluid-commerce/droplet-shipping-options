@@ -13,7 +13,9 @@
       <!-- Country Selector -->
       <div class="mb-6">
         <label class="block text-sm font-medium text-gray-700 mb-2">Select Country</label>
-        <select id="country-selector" class="w-full max-w-xs px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <select id="country-selector"
+                class="w-full max-w-xs px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onchange="handleCountryChange(this.value)">
           <% @countries.each do |country| %>
             <option value="<%= country %>" <%= 'selected' if country == @selected_country %>><%= country %></option>
           <% end %>
@@ -77,9 +79,24 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
+// Global function for country change - called via onchange attribute
+function handleCountryChange(selectedCountry) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const dri = urlParams.get('dri');
+  let newUrl = `/shipping_options/sort_order?country=${encodeURIComponent(selectedCountry)}`;
+  if (dri) {
+    newUrl += `&dri=${encodeURIComponent(dri)}`;
+  }
+  // Use Turbo if available, otherwise fallback to regular navigation
+  if (typeof Turbo !== 'undefined') {
+    Turbo.visit(newUrl);
+  } else {
+    window.location.href = newUrl;
+  }
+}
+
 function initializeSortOrder() {
   const container = document.getElementById('sortable-shipping-methods');
-  const countrySelector = document.getElementById('country-selector');
   const saveButton = document.getElementById('save-sort-order');
 
   if (!container) return;
@@ -109,21 +126,6 @@ function initializeSortOrder() {
         positionNumber.textContent = index + 1;
       }
       item.dataset.position = index + 1;
-    });
-  }
-
-  // Country selector change handler
-  if (countrySelector) {
-    countrySelector.addEventListener('change', function() {
-      const selectedCountry = this.value;
-      // Get current URL and DRI parameter
-      const urlParams = new URLSearchParams(window.location.search);
-      const dri = urlParams.get('dri');
-      let newUrl = `/shipping_options/sort_order?country=${selectedCountry}`;
-      if (dri) {
-        newUrl += `&dri=${encodeURIComponent(dri)}`;
-      }
-      window.location.href = newUrl;
     });
   }
 
