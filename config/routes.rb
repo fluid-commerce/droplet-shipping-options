@@ -27,6 +27,8 @@ Rails.application.routes.draw do
     end
     collection do
       get :shipping_methods
+      get :sort_order
+      patch :update_sort_order
     end
   end
 

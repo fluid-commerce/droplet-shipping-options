@@ -65,6 +65,45 @@ class ShippingOptionsController < ApplicationController
     end
   end
 
+  def sort_order
+    @countries = @company.shipping_options.active.flat_map(&:countries).uniq.sort
+    @selected_country = params[:country] || @countries.first
+    @shipping_options = if @selected_country.present?
+      @company.shipping_options
+              .active
+              .for_country(@selected_country)
+              .ordered_for_country(@selected_country)
+    else
+      []
+    end
+  end
+
+  def update_sort_order
+    country_code = params[:country_code]
+    positions = params[:positions] || []
+
+    ActiveRecord::Base.transaction do
+      positions.each do |pos|
+        shipping_option = @company.shipping_options.find(pos[:id])
+        shipping_option.set_position_for_country(country_code, pos[:position].to_i)
+        shipping_option.save!
+      end
+    end
+
+    respond_to do |format|
+      format.json { render json: { success: true } }
+      format.html { redirect_to sort_order_shipping_options_path(country: country_code), notice: "Sort order updated." }
+    end
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
+    respond_to do |format|
+      format.json { render json: { success: false, error: e.message }, status: :unprocessable_entity }
+      format.html do
+        redirect_to sort_order_shipping_options_path(country: country_code),
+                    alert: "Failed to update sort order."
+      end
+    end
+  end
+
 private
 
   def find_shipping_option

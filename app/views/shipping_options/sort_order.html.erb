@@ -1,0 +1,208 @@
+<% content_for :title, "Extended Shipping Options - Sort Order" %>
+
+<%= turbo_frame_tag "shipping_content" do %>
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Shipping Method Sort Order</h2>
+        <p class="text-gray-600">Drag and drop to reorder shipping methods by country</p>
+      </div>
+    </div>
+
+    <% if @countries.any? %>
+      <!-- Country Selector -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Select Country</label>
+        <select id="country-selector" class="w-full max-w-xs px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <% @countries.each do |country| %>
+            <option value="<%= country %>" <%= 'selected' if country == @selected_country %>><%= country %></option>
+          <% end %>
+        </select>
+      </div>
+
+      <!-- Sortable List -->
+      <% if @shipping_options.any? %>
+        <div id="sortable-shipping-methods" class="space-y-2" data-country="<%= @selected_country %>">
+          <% @shipping_options.each_with_index do |option, index| %>
+            <div class="sortable-item flex items-center bg-gray-50 border border-gray-200 rounded-lg p-4 cursor-move hover:bg-gray-100 transition-colors"
+                 data-id="<%= option.id %>"
+                 data-position="<%= option.position_for_country(@selected_country) || index + 1 %>">
+              <div class="drag-handle mr-4 text-gray-400">
+                <i class="fa-solid fa-grip-vertical text-lg"></i>
+              </div>
+              <div class="flex-1">
+                <div class="font-medium text-gray-900"><%= option.name %></div>
+                <div class="text-sm text-gray-500">
+                  <%= pluralize(option.delivery_time, 'day') %> - $<%= number_with_precision(option.starting_rate, precision: 2) %>
+                </div>
+              </div>
+              <div class="position-badge px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                #<span class="position-number"><%= option.position_for_country(@selected_country) || index + 1 %></span>
+              </div>
+            </div>
+          <% end %>
+        </div>
+
+        <!-- Save Button -->
+        <div class="mt-6 flex justify-end">
+          <button id="save-sort-order"
+                  class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled>
+            <i class="fa-solid fa-save mr-2"></i>
+            Save Order
+          </button>
+        </div>
+      <% else %>
+        <div class="text-center py-12 text-gray-500">
+          <i class="fa-solid fa-box text-4xl mb-4"></i>
+          <p>No shipping methods available for <%= @selected_country %></p>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="text-center py-12">
+        <div class="mx-auto h-12 w-12 text-gray-400">
+          <i class="fa-solid fa-box text-4xl"></i>
+        </div>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No shipping methods</h3>
+        <p class="mt-1 text-sm text-gray-500">Create shipping methods first to configure sort order.</p>
+        <div class="mt-6">
+          <%= link_to new_shipping_option_path, class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700", data: { turbo_frame: "_top" } do %>
+            Add Method
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+function initializeSortOrder() {
+  const container = document.getElementById('sortable-shipping-methods');
+  const countrySelector = document.getElementById('country-selector');
+  const saveButton = document.getElementById('save-sort-order');
+
+  if (!container) return;
+
+  let hasChanges = false;
+
+  // Initialize SortableJS
+  const sortable = new Sortable(container, {
+    animation: 150,
+    handle: '.drag-handle',
+    ghostClass: 'bg-blue-50',
+    chosenClass: 'shadow-lg',
+    dragClass: 'opacity-50',
+    onEnd: function(evt) {
+      updatePositionNumbers();
+      hasChanges = true;
+      if (saveButton) saveButton.disabled = false;
+    }
+  });
+
+  // Update position numbers after drag
+  function updatePositionNumbers() {
+    const items = container.querySelectorAll('.sortable-item');
+    items.forEach((item, index) => {
+      const positionNumber = item.querySelector('.position-number');
+      if (positionNumber) {
+        positionNumber.textContent = index + 1;
+      }
+      item.dataset.position = index + 1;
+    });
+  }
+
+  // Country selector change handler
+  if (countrySelector) {
+    countrySelector.addEventListener('change', function() {
+      const selectedCountry = this.value;
+      // Get current URL and DRI parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const dri = urlParams.get('dri');
+      let newUrl = `/shipping_options/sort_order?country=${selectedCountry}`;
+      if (dri) {
+        newUrl += `&dri=${encodeURIComponent(dri)}`;
+      }
+      window.location.href = newUrl;
+    });
+  }
+
+  // Save button handler
+  if (saveButton) {
+    saveButton.addEventListener('click', async function() {
+      const items = container.querySelectorAll('.sortable-item');
+      const positions = Array.from(items).map((item, index) => ({
+        id: parseInt(item.dataset.id),
+        position: index + 1
+      }));
+
+      const countryCode = container.dataset.country;
+
+      // Get CSRF token
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+      // Get DRI from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const dri = urlParams.get('dri');
+
+      let updateUrl = '/shipping_options/update_sort_order';
+      if (dri) {
+        updateUrl += `?dri=${encodeURIComponent(dri)}`;
+      }
+
+      try {
+        saveButton.disabled = true;
+        saveButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...';
+
+        const response = await fetch(updateUrl, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken,
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            country_code: countryCode,
+            positions: positions
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          hasChanges = false;
+          saveButton.innerHTML = '<i class="fa-solid fa-check mr-2"></i>Saved!';
+          setTimeout(() => {
+            saveButton.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Save Order';
+            saveButton.disabled = true;
+          }, 2000);
+        } else {
+          throw new Error(result.error || 'Failed to save');
+        }
+      } catch (error) {
+        console.error('Error saving sort order:', error);
+        saveButton.disabled = false;
+        saveButton.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Save Order';
+        alert('Failed to save sort order. Please try again.');
+      }
+    });
+  }
+
+  // Warn before leaving with unsaved changes
+  window.addEventListener('beforeunload', function(e) {
+    if (hasChanges) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', initializeSortOrder);
+document.addEventListener('turbo:load', initializeSortOrder);
+document.addEventListener('turbo:frame-load', function(e) {
+  if (e.target.id === 'shipping_content') {
+    initializeSortOrder();
+  }
+});
+</script>

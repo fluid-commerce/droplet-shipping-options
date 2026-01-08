@@ -13,6 +13,13 @@ class ShippingOption < ApplicationRecord
   scope :active, -> { where(status: "active") }
   scope :inactive, -> { where(status: "inactive") }
   scope :for_country, ->(country_code) { where("countries @> ?", [ country_code ].to_json) }
+  scope :ordered_for_country, ->(country_code) {
+    order(
+      Arel.sql(
+        "COALESCE((country_sort_positions->>#{connection.quote(country_code)})::integer, 2147483647) ASC, id ASC"
+      )
+    )
+  }
 
   def active?
     status == "active"
@@ -42,7 +49,39 @@ class ShippingOption < ApplicationRecord
     end
   end
 
+  # Get position for a specific country (fallback to nil if not set)
+  def position_for_country(country_code)
+    country_sort_positions&.dig(country_code)
+  end
+
+  # Set position for a specific country
+  def set_position_for_country(country_code, position)
+    self.country_sort_positions ||= {}
+    self.country_sort_positions[country_code] = position
+  end
+
+  after_create :assign_default_sort_positions
+
 private
+
+  def assign_default_sort_positions
+    return if countries.blank?
+
+    countries.each do |country_code|
+      # Find the max position for this country across company's shipping options
+      quoted_country = self.class.connection.quote(country_code)
+      max_position = company.shipping_options
+                            .where.not(id: id)
+                            .where("country_sort_positions ? :country", country: country_code)
+                            .maximum(Arel.sql("(country_sort_positions->>#{quoted_country})::integer"))
+
+      next_position = (max_position || 0) + 1
+      set_position_for_country(country_code, next_position)
+    end
+
+    save! if country_sort_positions_changed?
+  end
+
 
   def unique_name_per_company_and_countries
     return unless name.present? && company.present? && countries.present?

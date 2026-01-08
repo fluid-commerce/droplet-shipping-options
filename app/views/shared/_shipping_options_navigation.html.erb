@@ -1,26 +1,34 @@
 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 mb-8">
   <nav class="flex space-x-1" id="shipping-nav-tabs">
-    <% 
+    <%
       is_overview = controller_name == 'shipping_options' && action_name == 'index'
       is_shipping_methods = controller_name == 'shipping_options' && action_name == 'shipping_methods'
+      is_sort_order = controller_name == 'shipping_options' && action_name == 'sort_order'
       is_rate_tables = controller_name == 'rates' && action_name == 'index' && !params[:shipping_option_id]
     %>
-    
-    <%= link_to shipping_options_path, 
+
+    <%= link_to shipping_options_path,
         class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-blue-50 text-blue-700 border border-blue-200' if is_overview} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_overview}",
         data: { turbo_frame: "shipping_content", tab: "overview" } do %>
       <i class="fa-solid fa-grid-3 mr-2"></i>
       Overview
     <% end %>
-    
-    <%= link_to shipping_methods_shipping_options_path, 
+
+    <%= link_to shipping_methods_shipping_options_path,
         class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-blue-50 text-blue-700 border border-blue-200' if is_shipping_methods} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_shipping_methods}",
         data: { turbo_frame: "shipping_content", tab: "shipping_methods" } do %>
       <i class="fa-solid fa-list mr-2"></i>
       Shipping Methods
     <% end %>
-    
-    <%= link_to rate_tables_path, 
+
+    <%= link_to sort_order_shipping_options_path,
+        class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-blue-50 text-blue-700 border border-blue-200' if is_sort_order} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_sort_order}",
+        data: { turbo_frame: "shipping_content", tab: "sort_order" } do %>
+      <i class="fa-solid fa-sort mr-2"></i>
+      Sort Order
+    <% end %>
+
+    <%= link_to rate_tables_path,
         class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-blue-50 text-blue-700 border border-blue-200' if is_rate_tables} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_rate_tables}",
         data: { turbo_frame: "shipping_content", tab: "rate_tables" } do %>
       <i class="fa-solid fa-arrows-up-down mr-2"></i>
@@ -76,42 +84,49 @@ function initializeNavigation() {
   // Function to determine active tab based on current content
   function determineActiveTabFromContent() {
     const currentPath = window.location.pathname;
-    
+
     // Check if we're on new/edit pages
     if (currentPath.includes('/new') || currentPath.includes('/edit')) {
       return null; // Don't mark any tab as active on new/edit pages
     }
-    
+
     // Check the content of the shipping_content frame
     const shippingContent = document.getElementById('shipping_content');
     if (shippingContent) {
       const contentText = shippingContent.textContent || shippingContent.innerText;
-      
+
       // More specific detection based on actual content
       // Check for more specific markers first to avoid false matches
-      
+
       // Check for Overview - most specific patterns first
       if (contentText.includes('Shipping Overview') || contentText.includes('Monitor your shipping') || contentText.includes('Active Methods') || contentText.includes('Configured Regions')) {
         return 'overview';
       }
-      
+
+      // Check for Sort Order page
+      if (contentText.includes('Shipping Method Sort Order') || contentText.includes('Drag and drop to reorder')) {
+        return 'sort_order';
+      }
+
       // Check for Shipping Methods - look for page title and specific content
       // Use more specific patterns to avoid false matches with rate tables mentions
-      if (contentText.includes('Manage and configure your shipping methods') || 
+      if (contentText.includes('Manage and configure your shipping methods') ||
           (contentText.includes('Shipping Methods') && !contentText.includes('Rate Tables Overview'))) {
         return 'shipping_methods';
       }
-      
+
       // Check for Rate Tables last - this is the least specific
-      if (contentText.includes('Rate Tables Overview') || contentText.includes('Add Rate Table') || 
+      if (contentText.includes('Rate Tables Overview') || contentText.includes('Add Rate Table') ||
           (contentText.includes('Rate Tables') && !contentText.includes('Shipping Methods'))) {
         return 'rate_tables';
       }
     }
-    
+
     // Fallback to URL-based detection
     if (currentPath.includes('/rates') || currentPath.includes('/rate_tables')) {
       return 'rate_tables';
+    } else if (currentPath.includes('/sort_order')) {
+      return 'sort_order';
     } else if (currentPath.includes('/shipping_methods')) {
       return 'shipping_methods';
     } else if (currentPath.includes('/shipping_options')) {
