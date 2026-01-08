@@ -13,7 +13,9 @@
       <!-- Country Selector -->
       <div class="mb-6">
         <label class="block text-sm font-medium text-gray-700 mb-2">Select Country</label>
-        <select id="country-selector" class="w-full max-w-xs px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <select id="country-selector"
+                class="w-full max-w-xs px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                data-current-country="<%= @selected_country %>">
           <% @countries.each do |country| %>
             <option value="<%= country %>" <%= 'selected' if country == @selected_country %>><%= country %></option>
           <% end %>
@@ -73,136 +75,128 @@
       </div>
     <% end %>
   </div>
-<% end %>
 
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<script>
-function initializeSortOrder() {
-  const container = document.getElementById('sortable-shipping-methods');
-  const countrySelector = document.getElementById('country-selector');
-  const saveButton = document.getElementById('save-sort-order');
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script>
+  (function() {
+    const container = document.getElementById('sortable-shipping-methods');
+    const countrySelector = document.getElementById('country-selector');
+    const saveButton = document.getElementById('save-sort-order');
 
-  if (!container) return;
+    let hasChanges = false;
 
-  let hasChanges = false;
-
-  // Initialize SortableJS
-  const sortable = new Sortable(container, {
-    animation: 150,
-    handle: '.drag-handle',
-    ghostClass: 'bg-blue-50',
-    chosenClass: 'shadow-lg',
-    dragClass: 'opacity-50',
-    onEnd: function(evt) {
-      updatePositionNumbers();
-      hasChanges = true;
-      if (saveButton) saveButton.disabled = false;
-    }
-  });
-
-  // Update position numbers after drag
-  function updatePositionNumbers() {
-    const items = container.querySelectorAll('.sortable-item');
-    items.forEach((item, index) => {
-      const positionNumber = item.querySelector('.position-number');
-      if (positionNumber) {
-        positionNumber.textContent = index + 1;
-      }
-      item.dataset.position = index + 1;
-    });
-  }
-
-  // Country selector change handler
-  if (countrySelector) {
-    countrySelector.addEventListener('change', function() {
-      const selectedCountry = this.value;
-      // Get current URL and DRI parameter
-      const urlParams = new URLSearchParams(window.location.search);
-      const dri = urlParams.get('dri');
-      let newUrl = `/shipping_options/sort_order?country=${selectedCountry}`;
-      if (dri) {
-        newUrl += `&dri=${encodeURIComponent(dri)}`;
-      }
-      window.location.href = newUrl;
-    });
-  }
-
-  // Save button handler
-  if (saveButton) {
-    saveButton.addEventListener('click', async function() {
-      const items = container.querySelectorAll('.sortable-item');
-      const positions = Array.from(items).map((item, index) => ({
-        id: parseInt(item.dataset.id),
-        position: index + 1
-      }));
-
-      const countryCode = container.dataset.country;
-
-      // Get CSRF token
-      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-      // Get DRI from URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const dri = urlParams.get('dri');
-
-      let updateUrl = '/shipping_options/update_sort_order';
-      if (dri) {
-        updateUrl += `?dri=${encodeURIComponent(dri)}`;
-      }
-
-      try {
-        saveButton.disabled = true;
-        saveButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...';
-
-        const response = await fetch(updateUrl, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken,
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            country_code: countryCode,
-            positions: positions
-          })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          hasChanges = false;
-          saveButton.innerHTML = '<i class="fa-solid fa-check mr-2"></i>Saved!';
-          setTimeout(() => {
-            saveButton.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Save Order';
-            saveButton.disabled = true;
-          }, 2000);
-        } else {
-          throw new Error(result.error || 'Failed to save');
+    // Country selector change handler
+    if (countrySelector) {
+      countrySelector.addEventListener('change', function() {
+        const selectedCountry = this.value;
+        const urlParams = new URLSearchParams(window.location.search);
+        const dri = urlParams.get('dri');
+        let newUrl = `/shipping_options/sort_order?country=${encodeURIComponent(selectedCountry)}`;
+        if (dri) {
+          newUrl += `&dri=${encodeURIComponent(dri)}`;
         }
-      } catch (error) {
-        console.error('Error saving sort order:', error);
-        saveButton.disabled = false;
-        saveButton.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Save Order';
-        alert('Failed to save sort order. Please try again.');
+        if (typeof Turbo !== 'undefined') {
+          Turbo.visit(newUrl);
+        } else {
+          window.location.href = newUrl;
+        }
+      });
+    }
+
+    if (!container) return;
+
+    // Initialize SortableJS
+    if (typeof Sortable !== 'undefined') {
+      new Sortable(container, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'bg-blue-50',
+        chosenClass: 'shadow-lg',
+        dragClass: 'opacity-50',
+        onEnd: function(evt) {
+          updatePositionNumbers();
+          hasChanges = true;
+          if (saveButton) saveButton.disabled = false;
+        }
+      });
+    }
+
+    // Update position numbers after drag
+    function updatePositionNumbers() {
+      const items = container.querySelectorAll('.sortable-item');
+      items.forEach((item, index) => {
+        const positionNumber = item.querySelector('.position-number');
+        if (positionNumber) {
+          positionNumber.textContent = index + 1;
+        }
+        item.dataset.position = index + 1;
+      });
+    }
+
+    // Save button handler
+    if (saveButton) {
+      saveButton.addEventListener('click', async function() {
+        const items = container.querySelectorAll('.sortable-item');
+        const positions = Array.from(items).map((item, index) => ({
+          id: parseInt(item.dataset.id),
+          position: index + 1
+        }));
+
+        const countryCode = container.dataset.country;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const urlParams = new URLSearchParams(window.location.search);
+        const dri = urlParams.get('dri');
+
+        let updateUrl = '/shipping_options/update_sort_order';
+        if (dri) {
+          updateUrl += `?dri=${encodeURIComponent(dri)}`;
+        }
+
+        try {
+          saveButton.disabled = true;
+          saveButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...';
+
+          const response = await fetch(updateUrl, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': csrfToken,
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+              country_code: countryCode,
+              positions: positions
+            })
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            hasChanges = false;
+            saveButton.innerHTML = '<i class="fa-solid fa-check mr-2"></i>Saved!';
+            setTimeout(() => {
+              saveButton.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Save Order';
+              saveButton.disabled = true;
+            }, 2000);
+          } else {
+            throw new Error(result.error || 'Failed to save');
+          }
+        } catch (error) {
+          console.error('Error saving sort order:', error);
+          saveButton.disabled = false;
+          saveButton.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Save Order';
+          alert('Failed to save sort order. Please try again.');
+        }
+      });
+    }
+
+    // Warn before leaving with unsaved changes
+    window.addEventListener('beforeunload', function(e) {
+      if (hasChanges) {
+        e.preventDefault();
+        e.returnValue = '';
       }
     });
-  }
-
-  // Warn before leaving with unsaved changes
-  window.addEventListener('beforeunload', function(e) {
-    if (hasChanges) {
-      e.preventDefault();
-      e.returnValue = '';
-    }
-  });
-}
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', initializeSortOrder);
-document.addEventListener('turbo:load', initializeSortOrder);
-document.addEventListener('turbo:frame-load', function(e) {
-  if (e.target.id === 'shipping_content') {
-    initializeSortOrder();
-  }
-});
-</script>
+  })();
+  </script>
+<% end %>
