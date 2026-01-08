@@ -91,7 +91,7 @@ private
            .active
            .for_country(ship_to_country)
            .includes(:rates)
-           .order(:id)
+           .ordered_for_country(ship_to_country)
   end
 
   def success_result(shipping_options)
