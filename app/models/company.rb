@@ -11,7 +11,7 @@ class Company < ApplicationRecord
   scope :installed, -> { where(uninstalled_at: nil) }
   scope :uninstalled, -> { where.not(uninstalled_at: nil) }
 
-  after_initialize :set_default_installed_callback_ids, if: :new_record?
+  after_initialize :set_defaults, if: :new_record?
 
   # Check if the company's droplet installation is currently active and installed
   def installed?
@@ -25,7 +25,8 @@ class Company < ApplicationRecord
 
 private
 
-  def set_default_installed_callback_ids
+  def set_defaults
     self.installed_callback_ids ||= []
+    self.previous_dris ||= []
   end
 end
