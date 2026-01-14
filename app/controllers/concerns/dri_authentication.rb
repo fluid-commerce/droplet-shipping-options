@@ -115,12 +115,18 @@ private
   end
 
   # Attempts to find a company that may have been reinstalled by looking for
-  # recent installations with similar company identifiers
+  # the old DRI in their previous_dris history
   def find_potentially_reinstalled_company(old_dri)
-    # This is a placeholder for potential future enhancement
-    # We could log this for analytics to understand reinstallation patterns
     Rails.logger.info "[DRI] Checking for potential reinstallation related to: #{old_dri}"
-    nil
+
+    # Search for company where the old DRI exists in their previous_dris array
+    company = Company.where("previous_dris @> ?", [old_dri].to_json).first
+
+    if company
+      Rails.logger.info "[DRI] Found reinstalled company #{company.fluid_shop} with current DRI: #{company.droplet_installation_uuid}"
+    end
+
+    company
   end
 
   # Handles the case where we detected a company was reinstalled
