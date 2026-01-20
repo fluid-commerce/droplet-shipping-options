@@ -112,8 +112,8 @@ class Api::RatesControllerTest < ActionDispatch::IntegrationTest
     put bulk_update_api_rates_url, params: {
       dri: @dri,
       rates: [
-        { id: @rate.id, flat_rate: new_flat_rate, min_charge: new_min_charge }
-      ]
+        { id: @rate.id, flat_rate: new_flat_rate, min_charge: new_min_charge },
+      ],
     }, as: :json
 
     assert_response :success
@@ -134,8 +134,8 @@ class Api::RatesControllerTest < ActionDispatch::IntegrationTest
       dri: @dri,
       rates: [
         { id: @rate.id, flat_rate: 11.11 },
-        { id: rate_two.id, flat_rate: 22.22 }
-      ]
+        { id: rate_two.id, flat_rate: 22.22 },
+      ],
     }, as: :json
 
     assert_response :success
@@ -161,8 +161,8 @@ class Api::RatesControllerTest < ActionDispatch::IntegrationTest
       dri: @dri,
       rates: [
         { id: @rate.id, flat_rate: 999.99 },
-        { id: 999999, flat_rate: 111.11 }  # Non-existent rate
-      ]
+        { id: 999999, flat_rate: 111.11 },  # Non-existent rate
+      ],
     }, as: :json
 
     assert_response :unprocessable_entity
@@ -185,7 +185,7 @@ class Api::RatesControllerTest < ActionDispatch::IntegrationTest
       starting_rate: 10.00,
       countries: [ "US" ],
       status: "active",
-      company: globex
+      company: globex,
     )
     globex_rate = Rate.create!(
       shipping_option: globex_shipping,
@@ -193,7 +193,7 @@ class Api::RatesControllerTest < ActionDispatch::IntegrationTest
       min_range_lbs: 0,
       max_range_lbs: 5,
       flat_rate: 15.00,
-      min_charge: 5.00
+      min_charge: 5.00,
     )
 
     original_rate = globex_rate.flat_rate.to_f
@@ -202,8 +202,8 @@ class Api::RatesControllerTest < ActionDispatch::IntegrationTest
     put bulk_update_api_rates_url, params: {
       dri: @dri,  # acme's dri
       rates: [
-        { id: globex_rate.id, flat_rate: 999.99 }
-      ]
+        { id: globex_rate.id, flat_rate: 999.99 },
+      ],
     }, as: :json
 
     assert_response :unprocessable_entity
@@ -219,7 +219,7 @@ class Api::RatesControllerTest < ActionDispatch::IntegrationTest
 
   test "bulk_update returns 400 for missing dri" do
     put bulk_update_api_rates_url, params: {
-      rates: [ { id: @rate.id, flat_rate: 10.00 } ]
+      rates: [ { id: @rate.id, flat_rate: 10.00 } ],
     }, as: :json
 
     assert_response :bad_request
@@ -229,8 +229,8 @@ class Api::RatesControllerTest < ActionDispatch::IntegrationTest
     put bulk_update_api_rates_url, params: {
       dri: @dri,
       rates: [
-        { id: @rate.id, flat_rate: "45.67", min_charge: "12.34" }
-      ]
+        { id: @rate.id, flat_rate: "45.67", min_charge: "12.34" },
+      ],
     }, as: :json
 
     assert_response :success
@@ -247,8 +247,8 @@ class Api::RatesControllerTest < ActionDispatch::IntegrationTest
     put bulk_update_api_rates_url, params: {
       dri: @dri,
       rates: [
-        { id: @rate.id, flat_rate: -10.00 }
-      ]
+        { id: @rate.id, flat_rate: -10.00 },
+      ],
     }, as: :json
 
     # If model allows negative (check model), this might succeed
@@ -262,8 +262,8 @@ class Api::RatesControllerTest < ActionDispatch::IntegrationTest
     put bulk_update_api_rates_url, params: {
       dri: @dri,
       rates: [
-        { id: @rate.id, flat_rate: 77.77, country: "XX" }  # country should be ignored
-      ]
+        { id: @rate.id, flat_rate: 77.77, country: "XX" },  # country should be ignored
+      ],
     }, as: :json
 
     assert_response :success

@@ -41,7 +41,7 @@ module Api
         countries: countries,
         total_count: total_count,
         limit: limit,
-        offset: offset
+        offset: offset,
       }
     end
 
@@ -84,7 +84,7 @@ module Api
       end
     end
 
-    private
+  private
 
     def serialize_rate(rate)
       {
@@ -96,7 +96,7 @@ module Api
         min_range_lbs: rate.min_range_lbs.to_f,
         max_range_lbs: rate.max_range_lbs.to_f,
         flat_rate: rate.flat_rate.to_f,
-        min_charge: rate.min_charge.to_f
+        min_charge: rate.min_charge.to_f,
       }
     end
   end
