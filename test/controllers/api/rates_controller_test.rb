@@ -76,10 +76,10 @@ class Api::RatesControllerTest < ActionDispatch::IntegrationTest
     assert json["rates"].length <= 2
   end
 
-  test "index returns 400 for missing dri" do
+  test "index returns 404 for missing dri" do
     get api_rates_url
 
-    assert_response :bad_request
+    assert_response :not_found
   end
 
   test "index serializes rate data correctly" do
@@ -217,12 +217,12 @@ class Api::RatesControllerTest < ActionDispatch::IntegrationTest
     assert_in_delta original_rate, globex_rate.flat_rate.to_f, 0.001
   end
 
-  test "bulk_update returns 400 for missing dri" do
+  test "bulk_update returns 404 for missing dri" do
     put bulk_update_api_rates_url, params: {
       rates: [ { id: @rate.id, flat_rate: 10.00 } ],
     }, as: :json
 
-    assert_response :bad_request
+    assert_response :not_found
   end
 
   test "bulk_update coerces string values to floats" do
@@ -251,9 +251,15 @@ class Api::RatesControllerTest < ActionDispatch::IntegrationTest
       ],
     }, as: :json
 
-    # If model allows negative (check model), this might succeed
-    # For now, we just verify the request completes
-    # Add assertion based on actual model validation behavior
+    assert_response :unprocessable_entity
+    json = JSON.parse(response.body)
+
+    assert_not json["success"]
+    assert json["errors"].any?
+
+    # Verify rate was not updated (rollback worked)
+    @rate.reload
+    assert_in_delta original_flat_rate, @rate.flat_rate.to_f, 0.001
   end
 
   test "bulk_update only updates permitted fields" do
