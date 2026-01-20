@@ -11,6 +11,14 @@ Rails.application.routes.draw do
     resources :shipping_options, only: %i[ index show create update destroy ]
   end
 
+  namespace :api do
+    resources :rates, only: %i[ index ] do
+      collection do
+        put :bulk_update
+      end
+    end
+  end
+
   namespace :admin do
     get "dashboard", to: "dashboard#index"
     resource :droplet, only: %i[ create update ]
@@ -36,6 +44,7 @@ Rails.application.routes.draw do
     collection do
       get :import
       post :process_import
+      get :editor
     end
   end
 end

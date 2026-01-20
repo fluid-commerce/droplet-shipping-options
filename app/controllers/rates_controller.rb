@@ -64,6 +64,10 @@ class RatesController < ApplicationController
     # Show import form
   end
 
+  def editor
+    # React-based bulk editor
+  end
+
   def process_import
     # If applying corrections, use stored file from temporary file
     if params[:apply_corrections] == "true"

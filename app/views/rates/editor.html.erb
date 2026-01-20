@@ -1,0 +1,26 @@
+<% content_for :head do %>
+  <%= vite_typescript_tag 'rate-editor.tsx' %>
+<% end %>
+
+<div class="flex items-center justify-between mb-6">
+  <div class="flex flex-col gap-1">
+    <h1 class="font-custom text-3xl font-bold text-gray-600">Bulk Rate Editor</h1>
+    <h3 class="text-gray-400">Edit multiple rates at once with spreadsheet-like editing</h3>
+  </div>
+  <div>
+    <%= link_to rate_tables_path(dri: session[:dri]),
+        class: "inline-flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-all duration-200",
+        data: { turbo_frame: "_top" } do %>
+      <i class="fa-solid fa-arrow-left mr-2"></i>
+      Back to Rates
+    <% end %>
+  </div>
+</div>
+
+<div
+  id="rate-editor-root"
+  data-api-base-path="<%= api_rates_path %>"
+  data-bulk-update-path="<%= bulk_update_api_rates_path %>"
+  data-dri="<%= session[:dri] %>"
+  data-back-url="<%= rate_tables_path(dri: session[:dri]) %>"
+></div>
