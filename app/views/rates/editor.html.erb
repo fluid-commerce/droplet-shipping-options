@@ -19,7 +19,8 @@
 
 <div
   id="rate-editor-root"
-  data-api-base-path="/api/rates"
+  data-api-base-path="<%= api_rates_path %>"
+  data-bulk-update-path="<%= bulk_update_api_rates_path %>"
   data-dri="<%= session[:dri] %>"
   data-back-url="<%= rate_tables_path(dri: session[:dri]) %>"
 ></div>

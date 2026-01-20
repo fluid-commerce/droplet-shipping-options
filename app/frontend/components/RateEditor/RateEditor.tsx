@@ -6,6 +6,7 @@ import BulkOperationsPanel from './BulkOperationsPanel';
 
 interface RateEditorProps {
   apiBasePath: string;
+  bulkUpdatePath: string;
   dri: string;
   backUrl: string;
 }
@@ -24,7 +25,7 @@ function validateRate(rate: RateState): Record<string, string> {
   return errors;
 }
 
-function RateEditor({ apiBasePath, dri, backUrl }: RateEditorProps) {
+function RateEditor({ apiBasePath, bulkUpdatePath, dri, backUrl }: RateEditorProps) {
   const [rates, setRates] = useState<RateState[]>([]);
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
@@ -183,7 +184,7 @@ function RateEditor({ apiBasePath, dri, backUrl }: RateEditorProps) {
     try {
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
-      const response = await fetch(`${apiBasePath}/bulk_update?dri=${encodeURIComponent(dri)}`, {
+      const response = await fetch(`${bulkUpdatePath}?dri=${encodeURIComponent(dri)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -222,7 +223,7 @@ function RateEditor({ apiBasePath, dri, backUrl }: RateEditorProps) {
     } finally {
       setIsSaving(false);
     }
-  }, [apiBasePath, dri, dirtyRates]);
+  }, [bulkUpdatePath, dri, dirtyRates]);
 
   // Revert all changes
   const revertChanges = useCallback(() => {
