@@ -12,7 +12,7 @@ Rails.application.routes.draw do
   end
 
   namespace :api do
-    resources :rates, only: [:index] do
+    resources :rates, only: %i[ index ] do
       collection do
         put :bulk_update
       end
