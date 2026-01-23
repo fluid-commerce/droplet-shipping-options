@@ -15,6 +15,8 @@ class Rate < ApplicationRecord
   scope :for_country, ->(country_code) { where(country: country_code) }
   scope :for_region, ->(region_code) { where(region: region_code) }
 
+  after_commit :invalidate_parent_cache
+
   def country_code
     country
   end
@@ -67,8 +69,6 @@ private
     end
   end
 
-private
-
   def ranges_overlap?(other_rate)
     my_min = min_range_lbs || 0
     my_max = max_range_lbs || Float::INFINITY
@@ -76,5 +76,9 @@ private
     other_max = other_rate.max_range_lbs || Float::INFINITY
 
     my_min < other_max && other_min < my_max
+  end
+
+  def invalidate_parent_cache
+    shipping_option&.invalidate_cache!
   end
 end

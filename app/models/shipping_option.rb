@@ -61,8 +61,26 @@ class ShippingOption < ApplicationRecord
   end
 
   after_create :assign_default_sort_positions
+  after_commit :invalidate_cache!
+
+  # Invalidates the shipping options cache for all countries this option serves.
+  # Also invalidates cache for any countries that were removed during an update.
+  def invalidate_cache!
+    countries_to_invalidate = Array(countries)
+
+    # Also invalidate removed countries on update
+    if previous_changes["countries"].present?
+      old_countries = previous_changes["countries"].first || []
+      countries_to_invalidate = (countries_to_invalidate + Array(old_countries)).uniq
+    end
+
+    countries_to_invalidate.each do |country|
+      Rails.cache.delete("shipping_opts:#{company_id}:#{country}")
+    end
+  end
 
 private
+
 
   def assign_default_sort_positions
     return if countries.blank?
