@@ -2,6 +2,8 @@ class ShippingCalculationService
   include ActiveModel::Model
   include ActiveModel::Attributes
 
+  SHIPPING_OPTIONS_CACHE_TTL = 10.minutes
+
   attr_accessor :company
   attr_accessor :items
   attribute :ship_to_country, :string
@@ -91,9 +93,13 @@ private
   end
 
   def find_available_shipping_options
+    # Cache key excludes state intentionally - we cache shipping options per country,
+    # then filter rates by state in Ruby (see find_best_rate). This allows sharing
+    # cached options across all states within a country.
     cache_key = "shipping_opts:#{company.id}:#{ship_to_country}"
 
-    Rails.cache.fetch(cache_key, expires_in: 10.minutes) do
+    Rails.cache.fetch(cache_key, expires_in: SHIPPING_OPTIONS_CACHE_TTL) do
+      Rails.logger.info "[ShippingCalc] Cache miss for #{cache_key}, querying database"
       company.shipping_options
              .active
              .for_country(ship_to_country)

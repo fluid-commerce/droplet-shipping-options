@@ -79,6 +79,6 @@ private
   end
 
   def invalidate_parent_cache
-    shipping_option&.send(:invalidate_shipping_cache)
+    shipping_option&.invalidate_cache!
   end
 end
