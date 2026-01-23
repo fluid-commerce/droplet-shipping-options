@@ -34,6 +34,12 @@ class ShippingCalculationService
   end
 
   def calculate_total_weight
+    @total_weight ||= compute_total_weight
+  end
+
+private
+
+  def compute_total_weight
     return 0.0 if items.blank?
 
     total_weight_in_lb = 0.0
@@ -84,14 +90,17 @@ class ShippingCalculationService
     total_weight_in_lb.round(2)
   end
 
-private
-
   def find_available_shipping_options
-    company.shipping_options
-           .active
-           .for_country(ship_to_country)
-           .includes(:rates)
-           .ordered_for_country(ship_to_country)
+    cache_key = "shipping_opts:#{company.id}:#{ship_to_country}"
+
+    Rails.cache.fetch(cache_key, expires_in: 10.minutes) do
+      company.shipping_options
+             .active
+             .for_country(ship_to_country)
+             .includes(:rates)
+             .ordered_for_country(ship_to_country)
+             .to_a  # Force load before caching
+    end
   end
 
   def success_result(shipping_options)
@@ -165,8 +174,6 @@ private
       shipping_delivery_time_estimate: 0,
     }
   end
-
-private
 
   def rate_matches_location_exact?(rate)
     rate.country_code == ship_to_country &&

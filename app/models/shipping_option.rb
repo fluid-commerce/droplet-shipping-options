@@ -61,8 +61,16 @@ class ShippingOption < ApplicationRecord
   end
 
   after_create :assign_default_sort_positions
+  after_commit :invalidate_shipping_cache
 
 private
+
+  def invalidate_shipping_cache
+    Array(countries).each do |country|
+      Rails.cache.delete("shipping_opts:#{company_id}:#{country}")
+    end
+  end
+
 
   def assign_default_sort_positions
     return if countries.blank?
