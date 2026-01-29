@@ -6,6 +6,7 @@ class ShippingCalculationService
 
   attr_accessor :company
   attr_accessor :items
+  attr_accessor :cart_id
   attribute :ship_to_country, :string
   attribute :ship_to_state, :string
 
@@ -14,13 +15,14 @@ class ShippingCalculationService
   validates :ship_to_state, presence: true
   validates :items, presence: true, allow_blank: true
 
-  def initialize(company:, ship_to_country:, ship_to_state:, items:)
+  def initialize(company:, ship_to_country:, ship_to_state:, items:, cart_id: nil)
     super(
       company: company,
       ship_to_country: ship_to_country,
       ship_to_state: ship_to_state,
       items: items
     )
+    @cart_id = cart_id
   end
 
   def call
@@ -98,7 +100,7 @@ private
     # cached options across all states within a country.
     cache_key = "shipping_opts:#{company.id}:#{ship_to_country}"
 
-    Rails.cache.fetch(cache_key, expires_in: SHIPPING_OPTIONS_CACHE_TTL) do
+    base_options = Rails.cache.fetch(cache_key, expires_in: SHIPPING_OPTIONS_CACHE_TTL) do
       Rails.logger.info "[ShippingCalc] Cache miss for #{cache_key}, querying database"
       company.shipping_options
              .active
@@ -107,6 +109,9 @@ private
              .ordered_for_country(ship_to_country)
              .to_a  # Force load before caching
     end
+
+    # Filter options based on subscription status (Yoli-specific feature)
+    filter_by_subscription_status(base_options)
   end
 
   def success_result(shipping_options)
@@ -133,9 +138,17 @@ private
 
   def serialize_shipping_option(shipping_option)
     rate = find_best_rate(shipping_option)
+    calculated_total = calculate_shipping_total(shipping_option, rate)
+
+    # If this is a subscriber-only option and user has subscription, it's free
+    final_total = if shipping_option.free_for_subscribers? && user_has_active_subscription?
+                    0  # FREE!
+                  else
+                    calculated_total
+                  end
 
     {
-      shipping_total: calculate_shipping_total(shipping_option, rate),
+      shipping_total: final_total,
       shipping_title: shipping_option.name,
       shipping_delivery_time_estimate: format_delivery_time(shipping_option.delivery_time),
     }
@@ -207,5 +220,43 @@ private
     else
       weight
     end
+  end
+
+  # Yoli-specific: Filter shipping options based on subscription status
+  def filter_by_subscription_status(shipping_options)
+    return shipping_options unless company.yoli?
+
+    has_subscription = user_has_active_subscription?
+
+    shipping_options.select do |option|
+      # If the method requires subscription, only include it if user has it
+      if option.free_for_subscribers?
+        if has_subscription
+          Rails.logger.info(
+            "[ShippingCalc] Including subscriber-only option: #{option.name}"
+          )
+          true
+        else
+          Rails.logger.info(
+            "[ShippingCalc] Excluding subscriber-only option: #{option.name} " \
+            "(user not subscribed)"
+          )
+          false
+        end
+      else
+        # Normal options always included
+        true
+      end
+    end
+  end
+
+  # Yoli-specific: Check if user has active subscription
+  def user_has_active_subscription?
+    return false unless @cart_id
+    return false unless company.yoli?
+    return false unless company.free_shipping_enabled?
+
+    cart_session = CartSessionService.new(@cart_id)
+    cart_session.user_logged_in? && cart_session.has_active_subscription?
   end
 end

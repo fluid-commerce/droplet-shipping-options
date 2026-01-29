@@ -13,6 +13,9 @@ class Company < ApplicationRecord
 
   after_initialize :set_default_installed_callback_ids, if: :new_record?
 
+  # Settings accessors for Exigo integration
+  store_accessor :settings, :exigo_api_url, :exigo_auth_token, :exigo_subscription_id, :free_shipping_for_subscribers
+
   # Check if the company's droplet installation is currently active and installed
   def installed?
     uninstalled_at.nil? && active?
@@ -21,6 +24,14 @@ class Company < ApplicationRecord
   # Check if the company's droplet has been uninstalled
   def uninstalled?
     uninstalled_at.present?
+  end
+
+  def yoli?
+    name&.downcase&.include?("yoli")
+  end
+
+  def free_shipping_enabled?
+    free_shipping_for_subscribers == "true" || free_shipping_for_subscribers == true
   end
 
 private

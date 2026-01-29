@@ -9,7 +9,8 @@ class Callbacks::ShippingOptionsController < ApplicationController
       company: @company,
       ship_to_country: @ship_to_country,
       ship_to_state: @ship_to_state,
-      items: payload[:cart][:items]
+      items: payload[:cart][:items],
+      cart_id: payload[:cart][:id]  # Pass cart_id for subscription check
     )
 
     result = service.call
