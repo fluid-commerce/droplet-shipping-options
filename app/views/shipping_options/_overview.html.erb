@@ -40,18 +40,21 @@
   </div>
 
   <% if @shipping_options.any? %>
-    <div class="flex flex-col md:flex-row gap-6">
-      <% @shipping_options.each do |shipping_option| %>
-        <div class="flex-1 bg-white border border-gray-200 rounded-xl p-6">
+    <% initial_display_count = 6 %>
+    <% has_more = @shipping_options.count > initial_display_count %>
+
+    <div id="shipping-methods-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <% @shipping_options.each_with_index do |shipping_option, index| %>
+        <div class="bg-white border border-gray-200 rounded-xl p-6 <%= 'hidden expandable-method' if index >= initial_display_count %>">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-bold text-gray-900"><%= shipping_option.name %></h3>
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <h3 class="text-lg font-bold text-gray-900 truncate" title="<%= shipping_option.name %>"><%= shipping_option.name %></h3>
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex-shrink-0 ml-2">
               <div class="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
               <%= shipping_option.status.capitalize %>
             </span>
           </div>
-          <div class="text-sm text-gray-600 mb-4"><%= shipping_option.countries.join(', ') %></div>
-          <div class="space-y-3">
+          <div class="text-sm text-gray-600 mb-4 truncate" title="<%= shipping_option.countries.join(', ') %>"><%= shipping_option.countries.join(', ') %></div>
+          <div class="grid grid-cols-2 gap-3">
             <div class="text-center">
               <div class="text-2xl font-bold text-gray-900"><%= shipping_option.delivery_time %></div>
               <div class="text-sm text-gray-600"><%= pluralize(shipping_option.delivery_time, 'day') %></div>
@@ -64,6 +67,33 @@
         </div>
       <% end %>
     </div>
+
+    <% if has_more %>
+      <div class="mt-6 text-center">
+        <button type="button" id="expand-methods-btn" onclick="toggleShippingMethods()" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+          <i class="fa-solid fa-chevron-down mr-2 transition-transform" id="expand-icon"></i>
+          <span id="expand-text">Show all <%= @shipping_options.count %> methods</span>
+        </button>
+      </div>
+
+      <script>
+        function toggleShippingMethods() {
+          const expandables = document.querySelectorAll('.expandable-method');
+          const btn = document.getElementById('expand-methods-btn');
+          const icon = document.getElementById('expand-icon');
+          const text = document.getElementById('expand-text');
+          const isExpanded = btn.dataset.expanded === 'true';
+
+          expandables.forEach(el => {
+            el.classList.toggle('hidden', isExpanded);
+          });
+
+          icon.classList.toggle('rotate-180', !isExpanded);
+          text.textContent = isExpanded ? 'Show all <%= @shipping_options.count %> methods' : 'Show less';
+          btn.dataset.expanded = !isExpanded;
+        }
+      </script>
+    <% end %>
   <% else %>
     <div class="text-center py-12">
       <div class="mx-auto h-12 w-12 text-gray-400">
