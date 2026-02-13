@@ -20,7 +20,7 @@ class ExigoSubscriptionService
     false
   end
 
-  private
+private
 
   def db_configured?
     @company.settings&.dig("exigo_db_server").present? &&

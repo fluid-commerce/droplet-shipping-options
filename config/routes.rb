@@ -51,7 +51,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resource :exigo_setting, only: [:edit, :update] do
+  resource :exigo_setting, only: %i[edit update] do
     post :test_connection, on: :collection
   end
 end
