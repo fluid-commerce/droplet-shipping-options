@@ -24,7 +24,7 @@ class CartSessionService
     find_record&.destroy
   end
 
-  private
+private
 
   def find_record
     @record ||= CartSession.find_by(cart_id: @cart_id)

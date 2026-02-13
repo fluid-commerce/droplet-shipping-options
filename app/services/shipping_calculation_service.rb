@@ -142,10 +142,10 @@ private
 
     # If this is a subscriber-only option and user has subscription, it's free
     final_total = if shipping_option.free_for_subscribers? && user_has_active_subscription?
-                    0  # FREE!
-                  else
-                    calculated_total
-                  end
+      0  # FREE!
+    else
+      calculated_total
+    end
 
     {
       shipping_total: final_total,
