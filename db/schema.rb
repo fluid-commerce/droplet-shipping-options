@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_01_28_171930) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_13_115739) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -22,6 +22,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_28_171930) do
     t.boolean "active"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "cart_sessions", force: :cascade do |t|
+    t.integer "cart_id"
+    t.string "email"
+    t.boolean "has_active_subscription"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cart_id"], name: "index_cart_sessions_on_cart_id"
   end
 
   create_table "companies", force: :cascade do |t|

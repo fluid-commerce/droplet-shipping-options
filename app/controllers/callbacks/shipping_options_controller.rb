@@ -10,10 +10,16 @@ class Callbacks::ShippingOptionsController < ApplicationController
       ship_to_country: @ship_to_country,
       ship_to_state: @ship_to_state,
       items: payload[:cart][:items],
-      cart_id: payload[:cart][:id]  # Pass cart_id for subscription check
+      cart_id: payload[:cart][:id],
+      cart_email: payload[:cart][:email]
     )
 
     result = service.call
+
+    if result[:success] && @company.yoli?
+      session = CartSessionService.new(payload[:cart][:id])
+      result[:logged_in_email] = session.cached_email if session.cached_email.present?
+    end
 
     if result[:success]
       render json: result, status: :ok
@@ -67,8 +73,8 @@ private
       return
     end
 
-    @ship_to_country = ship_to[:country_code]
-    @ship_to_state = ship_to[:state]
+    @ship_to_country = ship_to[:country_code]&.to_s&.upcase&.presence
+    @ship_to_state = ship_to[:state]&.to_s&.upcase&.presence
 
     unless @ship_to_country.present?
       render json: {
@@ -91,6 +97,7 @@ private
     @payload ||= params.permit(
       cart: [
         :id,
+        :email,
         items: [
           :id,
           :name,

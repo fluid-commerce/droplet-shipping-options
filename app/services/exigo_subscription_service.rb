@@ -1,75 +1,77 @@
 # frozen_string_literal: true
 
 class ExigoSubscriptionService
-  def initialize(customer_id, company:)
-    @customer_id = customer_id
+  def initialize(email, company:)
+    @email = email
     @company = company
-    @base_url = company.exigo_api_url || ENV.fetch("EXIGO_API_URL", "https://sandboxapi4.exigo.com")
-    @auth_token = company.exigo_auth_token || ENV.fetch("EXIGO_AUTH_TOKEN", "")
-    @subscription_id = company.exigo_subscription_id || ENV.fetch("EXIGO_SUBSCRIPTION_ID", "9")
+    @subscription_id = company.exigo_subscription_id || "9"
   end
 
   def has_active_subscription?
-    return false unless @customer_id
-    return false if @auth_token.blank?
+    return false if @email.blank?
+    return false unless db_configured?
 
-    Rails.cache.fetch(cache_key, expires_in: 5.minutes) do
-      check_subscription(@customer_id, @subscription_id)
-    end
+    check_subscription_by_email
+  rescue TinyTds::Error => e
+    Rails.logger.error("[ExigoSubscription] DB error: #{e.message}")
+    false
+  rescue StandardError => e
+    Rails.logger.error("[ExigoSubscription] Error: #{e.message}")
+    false
   end
 
   private
 
-  def cache_key
-    "exigo:subscription:#{@customer_id}:#{@subscription_id}"
+  def db_configured?
+    @company.settings&.dig("exigo_db_server").present? &&
+      @company.settings&.dig("exigo_db_name").present? &&
+      @company.settings&.dig("exigo_db_user").present? &&
+      @company.settings&.dig("exigo_db_password").present?
   end
 
-  def check_subscription(customer_id, subscription_id)
-    response = HTTParty.get(
-      "#{@base_url}/3.0/subscription",
-      query: {
-        subscriptionID: subscription_id,
-        customerID: customer_id
-      },
-      headers: {
-        "Authorization" => "Basic #{@auth_token}"
-      },
-      timeout: 3
+  def check_subscription_by_email
+    client = build_client
+    result = client.execute(subscription_query)
+    row = result.first
+    result.cancel
+    client.close
+
+    has_subscription = row.present?
+
+    Rails.logger.info(
+      "[ExigoSubscription] Email=#{@email}, SubscriptionID=#{@subscription_id}: #{has_subscription}"
     )
 
-    if response.success?
-      data = JSON.parse(response.body)
+    has_subscription
+  end
 
-      # Si startDate es "0001-01-01" = NO tiene subscription
-      start_date = data["startDate"]
-      return false if start_date == "0001-01-01T00:00:00" || start_date.nil?
+  def subscription_query
+    <<~SQL.squish
+      SELECT TOP 1 cs.CustomerID
+      FROM CustomerSubscriptions cs
+      INNER JOIN Customers c ON cs.CustomerID = c.CustomerID
+      WHERE cs.SubscriptionID = #{sanitize(@subscription_id)}
+        AND cs.IsActive = 1
+        AND c.Email = '#{sanitize_string(@email)}'
+    SQL
+  end
 
-      # Verificar que no haya expirado
-      expire_date = data["expireDate"]
-      if expire_date.present? && expire_date != "0001-01-01T00:00:00"
-        expire = DateTime.parse(expire_date)
-        return false if expire < DateTime.now
-      end
-
-      # Tiene subscription activa
-      has_subscription = true
-
-      Rails.logger.info(
-        "[ExigoSubscription] Customer #{customer_id} subscription #{subscription_id}: #{has_subscription} " \
-        "(start: #{start_date}, expire: #{expire_date})"
-      )
-
-      has_subscription
-    else
-      Rails.logger.error(
-        "[ExigoSubscription] API error #{response.code}: #{response.body}"
-      )
-      false
-    end
-  rescue StandardError => e
-    Rails.logger.error(
-      "[ExigoSubscription] Error for customer #{customer_id}: #{e.message}"
+  def build_client
+    TinyTds::Client.new(
+      host: @company.settings["exigo_db_server"],
+      database: @company.settings["exigo_db_name"],
+      username: @company.settings["exigo_db_user"],
+      password: @company.settings["exigo_db_password"],
+      timeout: 5,
+      connect_timeout: 5
     )
-    false
+  end
+
+  def sanitize(value)
+    value.to_s.gsub(/[^0-9]/, "")
+  end
+
+  def sanitize_string(value)
+    value.to_s.gsub("'", "''")
   end
 end

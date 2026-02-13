@@ -9,11 +9,9 @@ Rails.application.routes.draw do
 
   namespace :callbacks do
     resources :shipping_options, only: %i[ index show create update destroy ]
-    resources :customer_sessions, only: [:create] do
-      collection do
-        post :logout, action: :destroy
-      end
-    end
+    post "cart_customer_logged_in", to: "cart_callbacks#logged_in"
+    post "update_cart_email", to: "cart_callbacks#update_email"
+    post "verify_email_success", to: "cart_callbacks#email_verified"
   end
 
   namespace :api do

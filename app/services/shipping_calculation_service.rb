@@ -6,7 +6,6 @@ class ShippingCalculationService
 
   attr_accessor :company
   attr_accessor :items
-  attr_accessor :cart_id
   attribute :ship_to_country, :string
   attribute :ship_to_state, :string
 
@@ -15,7 +14,7 @@ class ShippingCalculationService
   validates :ship_to_state, presence: true
   validates :items, presence: true, allow_blank: true
 
-  def initialize(company:, ship_to_country:, ship_to_state:, items:, cart_id: nil)
+  def initialize(company:, ship_to_country:, ship_to_state:, items:, cart_id: nil, cart_email: nil)
     super(
       company: company,
       ship_to_country: ship_to_country,
@@ -23,6 +22,7 @@ class ShippingCalculationService
       items: items
     )
     @cart_id = cart_id
+    @cart_email = cart_email&.to_s&.strip&.presence
   end
 
   def call
@@ -250,13 +250,40 @@ private
     end
   end
 
-  # Yoli-specific: Check if user has active subscription
+  # Yoli-specific: Only read subscription state from cache. We never change state here.
+  # State is set only by update_cart_email and cart_customer_logged_in (they check Exigo and store).
+  # IMPORTANT: We verify that the cart email matches the cached email to prevent stale subscription state.
   def user_has_active_subscription?
     return false unless @cart_id
     return false unless company.yoli?
     return false unless company.free_shipping_enabled?
 
-    cart_session = CartSessionService.new(@cart_id)
-    cart_session.user_logged_in? && cart_session.has_active_subscription?
+    session = CartSessionService.new(@cart_id)
+    cached_email = session.cached_email
+    cached_subscription = session.has_active_subscription?
+
+    Rails.logger.info(
+      "[ShippingCalc] Subscription check: cart_id=#{@cart_id}, " \
+      "cart_email=#{@cart_email.inspect}, cached_email=#{cached_email.inspect}, " \
+      "cached_subscription=#{cached_subscription}"
+    )
+
+    # If no cached email, user is not logged in - no free shipping
+    unless cached_email.present?
+      Rails.logger.info("[ShippingCalc] No cached email, returning false")
+      return false
+    end
+
+    # If cart email doesn't match cached email, subscription state is stale - ignore it
+    if @cart_email.present? && @cart_email.downcase != cached_email.downcase
+      Rails.logger.info(
+        "[ShippingCalc] Email mismatch: cart_email=#{@cart_email}, cached_email=#{cached_email}. " \
+        "Ignoring cached subscription state."
+      )
+      return false
+    end
+
+    Rails.logger.info("[ShippingCalc] Returning cached subscription: #{cached_subscription}")
+    cached_subscription
   end
 end
