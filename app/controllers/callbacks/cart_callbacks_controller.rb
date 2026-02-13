@@ -38,48 +38,45 @@ class Callbacks::CartCallbacksController < ApplicationController
   end
 
   # POST /callbacks/verify_email_success
-  # Fluid may call this after email verification. Same logic as update_email:
-  # if the verified email differs from the cached login email, clear subscription cache.
+  # Fluid calls this after email verification. Clear subscription if email differs.
   def email_verified
-    update_email
+    handle_email_change
   end
 
   # POST /callbacks/update_cart_email
-  # Only clear subscription cache if email changes. We do NOT consult Exigo here.
-  # Free shipping is only granted when user is authenticated (cart_customer_logged_in).
-  # This prevents giving free shipping to anyone who types a subscriber's email.
+  # Clear subscription state if email changed from the logged-in email.
   def update_email
+    handle_email_change
+  end
+
+private
+
+  def handle_email_change
     cart_id = payload[:cart][:id]
     new_cart_email = (params[:email] || params.dig(:cart, :email))&.to_s&.strip&.presence
 
     Rails.logger.info(
-      "[CartCallback:update_email] cart_id=#{cart_id}, new_cart_email=#{new_cart_email.inspect}"
+      "[CartCallback:handle_email_change] cart_id=#{cart_id}, new_cart_email=#{new_cart_email.inspect}"
     )
 
-    unless cart_id.present?
-      return render json: { success: true, valid: true }, status: :ok
-    end
+    if cart_id.present?
+      session = CartSessionService.new(cart_id)
+      cached_email = session.cached_email
 
-    session = CartSessionService.new(cart_id)
-    cached_email = session.cached_email
-
-    # If email is blank or different from logged-in email, clear subscription state
-    if new_cart_email.blank?
-      Rails.logger.info("[CartCallback:update_email] Email blank, clearing cache")
-      session.clear_all
-    elsif cached_email.present? && new_cart_email.downcase != cached_email.downcase
-      Rails.logger.info(
-        "[CartCallback:update_email] Email changed from #{cached_email} to #{new_cart_email}, clearing cache"
-      )
-      session.clear_all
-    else
-      Rails.logger.info("[CartCallback:update_email] Email unchanged or no cached email, no action needed")
+      # If email is blank or different from logged-in email, clear subscription state
+      if new_cart_email.blank? && cached_email.present?
+        Rails.logger.info("[CartCallback] Email blank, clearing session")
+        session.clear_all
+      elsif cached_email.present? && new_cart_email.present? && new_cart_email.downcase != cached_email.downcase
+        Rails.logger.info(
+          "[CartCallback] Email changed from #{cached_email} to #{new_cart_email}, clearing session"
+        )
+        session.clear_all
+      end
     end
 
     render json: { success: true, valid: true }, status: :ok
   end
-
-private
 
   def find_company
     company_id = payload[:cart][:company][:id]
