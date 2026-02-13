@@ -6,6 +6,19 @@ class ApplicationController < ActionController::Base
 
   before_action :log_session_info
 
+  # Validates that droplet install/uninstall webhooks are for THIS droplet
+  # This prevents cross-contamination from other droplets registered to the same owner company
+  def validate_droplet_authorization
+    expected_uuid = Setting.droplet.uuid
+    received_uuid = params.dig(:company, :droplet_uuid)
+
+    unless received_uuid.present? && expected_uuid.present? &&
+           ActiveSupport::SecurityUtils.secure_compare(received_uuid.to_s, expected_uuid.to_s)
+      Rails.logger.warn "[WebhookAuth] Rejected webhook for wrong droplet. Received: #{received_uuid}"
+      render json: { error: "Unauthorized - wrong droplet" }, status: :unauthorized
+    end
+  end
+
 protected
 
   def after_sign_in_path_for(resource)

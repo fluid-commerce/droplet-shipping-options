@@ -1,6 +1,9 @@
 class WebhooksController < ApplicationController
   skip_before_action :verify_authenticity_token
-  before_action :authenticate_webhook_token, unless: :droplet_installed_for_first_time?
+  before_action :validate_droplet_authorization, if: :droplet_installation_event?
+  before_action :authenticate_webhook_token, unless: :droplet_installation_event?
+
+  DROPLET_INSTALLATION_EVENTS = %w[installed uninstalled].freeze
 
   def create
     event_type = "#{params[:resource]}.#{params[:event]}"
@@ -34,8 +37,8 @@ class WebhooksController < ApplicationController
 
 private
 
-  def droplet_installed_for_first_time?
-    params[:resource] == "droplet" && params[:event] == "installed"
+  def droplet_installation_event?
+    params[:resource] == "droplet" && DROPLET_INSTALLATION_EVENTS.include?(params[:event])
   end
 
   def authenticate_webhook_token
@@ -50,9 +53,15 @@ private
   def valid_auth_token?(company)
     # Check header auth token first, then fall back to params
     auth_header = request.headers["AUTH_TOKEN"] || request.headers["X-Auth-Token"] || request.env["HTTP_AUTH_TOKEN"]
-    webhook_auth_token = Setting.fluid_webhook.auth_token
+    return false if auth_header.blank?
 
-    auth_header.present? && auth_header == webhook_auth_token
+    webhook_auth_token = Setting.fluid_webhook.auth_token
+    company_token = company.webhook_verification_token
+
+    # Accept either the global webhook token OR the company-specific verification token
+    # Use secure_compare to prevent timing attacks
+    ActiveSupport::SecurityUtils.secure_compare(auth_header.to_s, webhook_auth_token.to_s) ||
+      (company_token.present? && ActiveSupport::SecurityUtils.secure_compare(auth_header.to_s, company_token.to_s))
   end
 
   def find_company
