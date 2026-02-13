@@ -5,6 +5,7 @@
       is_shipping_methods = controller_name == 'shipping_options' && action_name == 'shipping_methods'
       is_sort_order = controller_name == 'shipping_options' && action_name == 'sort_order'
       is_rate_tables = controller_name == 'rates' && action_name == 'index' && !params[:shipping_option_id]
+      is_exigo_settings = controller_name == 'exigo_settings' && action_name == 'edit'
     %>
 
     <%= link_to shipping_options_path,
@@ -33,6 +34,15 @@
         data: { turbo_frame: "shipping_content", tab: "rate_tables" } do %>
       <i class="fa-solid fa-arrows-up-down mr-2"></i>
       Rate Tables
+    <% end %>
+
+    <% if yoli_company? %>
+      <%= link_to edit_exigo_setting_path,
+          class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-purple-50 text-purple-700 border border-purple-200' if is_exigo_settings} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_exigo_settings}",
+          data: { turbo_frame: "shipping_content", tab: "exigo_settings" } do %>
+        <i class="fa-solid fa-gear mr-2"></i>
+        Exigo Settings
+      <% end %>
     <% end %>
   </nav>
 </div>
@@ -120,10 +130,17 @@ function initializeNavigation() {
           (contentText.includes('Rate Tables') && !contentText.includes('Shipping Methods'))) {
         return 'rate_tables';
       }
+
+      // Check for Exigo Settings
+      if (contentText.includes('Exigo Integration Settings') || contentText.includes('Exigo API')) {
+        return 'exigo_settings';
+      }
     }
 
     // Fallback to URL-based detection
-    if (currentPath.includes('/rates') || currentPath.includes('/rate_tables')) {
+    if (currentPath.includes('/exigo_setting')) {
+      return 'exigo_settings';
+    } else if (currentPath.includes('/rates') || currentPath.includes('/rate_tables')) {
       return 'rate_tables';
     } else if (currentPath.includes('/sort_order')) {
       return 'sort_order';

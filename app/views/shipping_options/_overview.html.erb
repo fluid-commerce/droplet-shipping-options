@@ -45,13 +45,21 @@
 
     <div id="shipping-methods-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <% @shipping_options.each_with_index do |shipping_option, index| %>
-        <div class="bg-white border border-gray-200 rounded-xl p-6 <%= 'hidden expandable-method' if index >= initial_display_count %>">
+        <div class="bg-white border border-gray-200 rounded-xl p-6 <%= 'hidden expandable-method' if index >= initial_display_count %> <%= 'ring-2 ring-purple-400 bg-purple-50/50' if shipping_option.free_for_subscribers? %>">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-bold text-gray-900 truncate" title="<%= shipping_option.name %>"><%= shipping_option.name %></h3>
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex-shrink-0 ml-2">
-              <div class="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-              <%= shipping_option.status.capitalize %>
-            </span>
+            <div class="flex flex-col gap-2 flex-shrink-0 ml-2">
+              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                <div class="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                <%= shipping_option.status.capitalize %>
+              </span>
+              <% if shipping_option.free_for_subscribers? %>
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                  <i class="fa-solid fa-crown mr-1"></i>
+                  Subscribers Only
+                </span>
+              <% end %>
+            </div>
           </div>
           <div class="text-sm text-gray-600 mb-4 truncate" title="<%= shipping_option.countries.join(', ') %>"><%= shipping_option.countries.join(', ') %></div>
           <div class="grid grid-cols-2 gap-3">
@@ -60,10 +68,23 @@
               <div class="text-sm text-gray-600"><%= pluralize(shipping_option.delivery_time, 'day') %></div>
             </div>
             <div class="text-center">
-              <div class="text-2xl font-bold text-gray-900">$<%= number_with_precision(shipping_option.starting_rate, precision: 2) %>+</div>
-              <div class="text-sm text-gray-600">Starting Rate</div>
+              <% if shipping_option.free_for_subscribers? %>
+                <div class="text-2xl font-bold text-purple-600">FREE</div>
+                <div class="text-sm text-purple-600">For Subscribers</div>
+              <% else %>
+                <div class="text-2xl font-bold text-gray-900">$<%= number_with_precision(shipping_option.starting_rate, precision: 2) %>+</div>
+                <div class="text-sm text-gray-600">Starting Rate</div>
+              <% end %>
             </div>
           </div>
+          <% if shipping_option.free_for_subscribers? %>
+            <div class="mt-4 pt-4 border-t border-purple-200">
+              <div class="flex items-center text-xs text-purple-700">
+                <i class="fa-solid fa-eye-slash mr-2"></i>
+                <span>Hidden from non-subscribers</span>
+              </div>
+            </div>
+          <% end %>
         </div>
       <% end %>
     </div>

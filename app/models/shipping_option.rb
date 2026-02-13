@@ -41,6 +41,10 @@ class ShippingOption < ApplicationRecord
     active? ? disable! : enable!
   end
 
+  def free_for_subscribers?
+    free_for_subscribers == true
+  end
+
   def countries=(value)
     if value.is_a?(String)
       super(value.split(",").map(&:strip).reject(&:blank?))
