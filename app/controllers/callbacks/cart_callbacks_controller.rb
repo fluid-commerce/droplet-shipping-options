@@ -5,7 +5,6 @@ class Callbacks::CartCallbacksController < ApplicationController
   before_action :find_company
 
   # POST /callbacks/cart_customer_logged_in
-  # User just logged in → check Exigo subscription → cache → recalculate shipping
   def logged_in
     cart_id = payload[:cart][:id]
     cart_token = params.dig(:cart, :cart_token)
@@ -28,7 +27,6 @@ class Callbacks::CartCallbacksController < ApplicationController
 
       CartSessionService.new(cart_id).store_login(email, has_subscription: has_subscription)
 
-      # Ask Core to recalculate shipping so UI reflects subscription status
       request_shipping_recalculate(cart_token) if cart_token.present?
 
       render json: { success: true, has_subscription: has_subscription }, status: :ok
@@ -38,13 +36,11 @@ class Callbacks::CartCallbacksController < ApplicationController
   end
 
   # POST /callbacks/verify_email_success
-  # Fluid calls this after email verification. Clear subscription if email differs.
   def email_verified
     handle_email_change
   end
 
   # POST /callbacks/update_cart_email
-  # Clear subscription state if email changed from the logged-in email.
   def update_email
     handle_email_change
   end

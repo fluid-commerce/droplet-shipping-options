@@ -13,7 +13,6 @@ class Company < ApplicationRecord
 
   after_initialize :set_default_installed_callback_ids, if: :new_record?
 
-  # Settings accessors for Exigo integration
   store_accessor :settings, :exigo_db_server, :exigo_db_name, :exigo_db_user, :exigo_db_password,
                  :exigo_subscription_id, :free_shipping_for_subscribers
 

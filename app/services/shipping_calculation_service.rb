@@ -107,7 +107,7 @@ private
              .for_country(ship_to_country)
              .includes(:rates)
              .ordered_for_country(ship_to_country)
-             .to_a  # Force load before caching
+             .to_a
     end
 
     # Filter options based on subscription status (Yoli-specific feature)
@@ -140,9 +140,8 @@ private
     rate = find_best_rate(shipping_option)
     calculated_total = calculate_shipping_total(shipping_option, rate)
 
-    # If this is a subscriber-only option and user has subscription, it's free
     final_total = if shipping_option.free_for_subscribers? && user_has_active_subscription?
-      0  # FREE!
+      0
     else
       calculated_total
     end
@@ -268,13 +267,11 @@ private
       "cached_subscription=#{cached_subscription}"
     )
 
-    # If no cached email, user is not logged in - no free shipping
     unless cached_email.present?
       Rails.logger.info("[ShippingCalc] No cached email, returning false")
       return false
     end
 
-    # If cart email doesn't match cached email, subscription state is stale - ignore it
     if @cart_email.present? && @cart_email.downcase != cached_email.downcase
       Rails.logger.info(
         "[ShippingCalc] Email mismatch: cart_email=#{@cart_email}, cached_email=#{cached_email}. " \

@@ -5,9 +5,7 @@ class ExigoSettingsController < ApplicationController
 
   before_action :ensure_yoli_company
 
-  def edit
-    # @company is set by DriAuthentication
-  end
+  def edit; end
 
   def update
     @company.assign_attributes(settings_params)
@@ -33,7 +31,6 @@ class ExigoSettingsController < ApplicationController
     end
 
     begin
-      # Test the actual connection using TinyTDS
       client = TinyTds::Client.new(
         host: server,
         database: database,
@@ -52,22 +49,22 @@ class ExigoSettingsController < ApplicationController
 
       render json: {
         success: true,
-        message: "Connection successful! Connected to #{database} on #{server}"
+        message: "Connection successful! Connected to #{database} on #{server}",
       }
     rescue TinyTds::Error => e
       render json: {
         success: false,
-        error: "Database connection failed: #{e.message}"
+        error: "Database connection failed: #{e.message}",
       }, status: :unprocessable_entity
     rescue StandardError => e
       render json: {
         success: false,
-        error: "Connection failed: #{e.message}"
+        error: "Connection failed: #{e.message}",
       }, status: :unprocessable_entity
     end
   end
 
-  private
+private
 
   def ensure_yoli_company
     unless @company&.yoli?
@@ -77,7 +74,6 @@ class ExigoSettingsController < ApplicationController
   end
 
   def settings_params
-    # Build a hash for the settings JSONB column
     {
       settings: {
         exigo_db_server: params.dig(:company, :exigo_db_server),
@@ -85,8 +81,8 @@ class ExigoSettingsController < ApplicationController
         exigo_db_user: params.dig(:company, :exigo_db_user),
         exigo_db_password: params.dig(:company, :exigo_db_password),
         exigo_subscription_id: params.dig(:company, :exigo_subscription_id),
-        free_shipping_for_subscribers: params.dig(:company, :free_shipping_for_subscribers) == "1"
-      }
+        free_shipping_for_subscribers: params.dig(:company, :free_shipping_for_subscribers) == "1",
+      },
     }
   end
 end

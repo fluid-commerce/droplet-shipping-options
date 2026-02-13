@@ -5,7 +5,6 @@ class CartSessionService
     @cart_id = cart_id
   end
 
-  # Called on cart_customer_logged_in: store email + subscription status
   def store_login(email, has_subscription:)
     record = find_or_initialize
     record.update!(email: email, has_active_subscription: has_subscription)
@@ -19,7 +18,6 @@ class CartSessionService
     find_record&.email
   end
 
-  # Called on update_cart_email when email changed: wipe everything
   def clear_all
     find_record&.destroy
   end
