@@ -35,5 +35,6 @@ environment_variables_cloud_run = {
   "RACK_ENV"            = "production",
   "RAILS_ENV"           = "production",
   "RAILS_LOG_TO_STDOUT" = "enabled",
-  "RAILS_MASTER_KEY"    = ""
+  "RAILS_MASTER_KEY"    = "",
+  "SENTRY_DSN"          = "https://bf840ff3a60ff103deac474b04208bb1@o553113.ingest.us.sentry.io/4510885897830400"
 }
