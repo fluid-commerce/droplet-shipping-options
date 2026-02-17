@@ -128,7 +128,8 @@ private
       @replaced_count, @affected_shipping_option_ids = delete_existing_rates_for_locations(locations_to_replace)
 
       if @replaced_count > 0
-        Rails.logger.info "[CSV Import] Replaced #{@replaced_count} existing rate(s) for #{locations_to_replace.size} location(s)"
+        Rails.logger.info "[CSV Import] Replaced #{@replaced_count} existing rate(s) " \
+                          "for #{locations_to_replace.size} location(s)"
       end
 
       # Validate all rows (now that conflicting DB records are removed)
@@ -437,7 +438,7 @@ private
     end
     combined = scopes.reduce { |chain, scope| chain.or(scope) }
 
-    affected_ids = locations.map(&:first).to_set
+    affected_ids = locations.to_set(&:first)
     total_deleted = combined.delete_all
 
     [ total_deleted, affected_ids ]
@@ -530,7 +531,7 @@ private
       success: true,
       message: message,
       imported_count: @success_count,
-      replaced_count: @replaced_count
+      replaced_count: @replaced_count,
     }
   end
 
@@ -541,7 +542,7 @@ private
       message: message,
       errors: @errors,
       row_errors: @row_errors,
-      imported_count: 0
+      imported_count: 0,
     }
   end
 end

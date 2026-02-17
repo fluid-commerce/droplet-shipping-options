@@ -445,8 +445,12 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
 
   test "should replace existing rates for the same shipping option, country, and region" do
     # Create existing rates for Express Shipping, US, CA
-    @shipping_option.rates.create!(country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 5, flat_rate: 10.00, min_charge: 5.00)
-    @shipping_option.rates.create!(country: "US", region: "CA", min_range_lbs: 5, max_range_lbs: 10, flat_rate: 15.00, min_charge: 8.00)
+    @shipping_option.rates.create!(
+      country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 5, flat_rate: 10.00, min_charge: 5.00
+    )
+    @shipping_option.rates.create!(
+      country: "US", region: "CA", min_range_lbs: 5, max_range_lbs: 10, flat_rate: 15.00, min_charge: 8.00
+    )
 
     assert_equal 2, @shipping_option.rates.where(country: "US", region: "CA").count
 
@@ -476,8 +480,12 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
 
   test "should not affect rates for locations not in the CSV" do
     # Create rates for two locations
-    @shipping_option.rates.create!(country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00)
-    @shipping_option.rates.create!(country: "US", region: "NY", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 12.00, min_charge: 6.00)
+    @shipping_option.rates.create!(
+      country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00
+    )
+    @shipping_option.rates.create!(
+      country: "US", region: "NY", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 12.00, min_charge: 6.00
+    )
 
     # Only import for CA — NY should remain untouched
     csv_content = <<~CSV
@@ -508,7 +516,9 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
 
   test "should rollback replaced rates when validation fails" do
     # Create existing rate
-    @shipping_option.rates.create!(country: "US", region: "TX", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00)
+    @shipping_option.rates.create!(
+      country: "US", region: "TX", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00
+    )
 
     # Import with an invalid row — everything should rollback
     csv_content = <<~CSV
@@ -532,7 +542,9 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
 
   test "should handle mix of new locations and replacement locations" do
     # Create existing rate for US/CA
-    @shipping_option.rates.create!(country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00)
+    @shipping_option.rates.create!(
+      country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00
+    )
 
     # Import replaces US/CA and adds new US/FL
     csv_content = <<~CSV
@@ -563,9 +575,13 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
 
   test "should treat country-level rates (nil region) separately from regional rates" do
     # Create country-level rate (no region)
-    @shipping_option.rates.create!(country: "US", region: nil, min_range_lbs: 0, max_range_lbs: 10, flat_rate: 5.00, min_charge: 2.00)
+    @shipping_option.rates.create!(
+      country: "US", region: nil, min_range_lbs: 0, max_range_lbs: 10, flat_rate: 5.00, min_charge: 2.00
+    )
     # Create regional rate
-    @shipping_option.rates.create!(country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00)
+    @shipping_option.rates.create!(
+      country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00
+    )
 
     # Only import country-level — regional should be untouched
     csv_content = <<~CSV
@@ -624,7 +640,9 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
   end
 
   test "should replace existing rates when applying auto-corrections" do
-    @shipping_option.rates.create!(country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00)
+    @shipping_option.rates.create!(
+      country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00
+    )
 
     # CSV with an oversized weight value that is auto-correctable
     csv_content = <<~CSV
@@ -658,7 +676,9 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
   end
 
   test "success message includes replaced count when rates were replaced" do
-    @shipping_option.rates.create!(country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00)
+    @shipping_option.rates.create!(
+      country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00
+    )
 
     csv_content = <<~CSV
       shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
