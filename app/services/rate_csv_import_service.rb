@@ -103,12 +103,18 @@ private
     # Preprocess and sort CSV data for proper import order
     sorted_data = preprocess_and_sort_csv(csv_data)
 
+    # Pre-load shipping options for efficient lookups throughout the import
+    @shipping_options_by_name = company.shipping_options.index_by(&:name)
+
     # Everything happens in a single transaction so that shipping option
     # changes, rate deletions, and new rate inserts all roll back together
     # if anything fails.
     ActiveRecord::Base.transaction do
       # Create or update shipping options for methods referenced in the CSV
       ensure_shipping_options_exist(csv_data)
+
+      # Reload the lookup hash to include any newly created shipping options
+      @shipping_options_by_name = company.shipping_options.reload.index_by(&:name)
 
       # Determine which (shipping_option, country, region) combos are in the
       # CSV so we can replace existing rates for those locations.
@@ -117,7 +123,9 @@ private
       # Delete existing rates for locations present in the CSV.
       # This turns the import into an upsert: locations in the CSV get fully
       # replaced, while locations NOT in the CSV remain untouched.
-      @replaced_count = delete_existing_rates_for_locations(locations_to_replace)
+      # Uses delete_all for performance; cache invalidation is handled
+      # explicitly below since delete_all skips AR callbacks.
+      @replaced_count, @affected_shipping_option_ids = delete_existing_rates_for_locations(locations_to_replace)
 
       if @replaced_count > 0
         Rails.logger.info "[CSV Import] Replaced #{@replaced_count} existing rate(s) for #{locations_to_replace.size} location(s)"
@@ -149,6 +157,7 @@ private
           Rails.logger.warn "[CSV Import] Row #{error[:row]}: #{error[:errors].join(', ')}"
         end
         @replaced_count = 0
+        @success_count = 0
         raise ActiveRecord::Rollback
       end
 
@@ -157,6 +166,13 @@ private
         item[:rate].save!
         @success_count += 1
       end
+    end
+
+    # Explicitly invalidate cache for shipping options whose rates were
+    # deleted via delete_all (which skips AR callbacks). The newly inserted
+    # rates trigger after_commit callbacks too, but this covers the delete side.
+    if @affected_shipping_option_ids&.any?
+      ShippingOption.where(id: @affected_shipping_option_ids.to_a).find_each(&:invalidate_cache!)
     end
   end
 
@@ -398,7 +414,7 @@ private
       method_name = row[:shipping_method]&.strip
       next if method_name.blank?
 
-      shipping_option = company.shipping_options.find_by(name: method_name)
+      shipping_option = @shipping_options_by_name[method_name]
       next unless shipping_option
 
       country = row[:country]&.strip&.upcase
@@ -411,29 +427,26 @@ private
   end
 
   # Delete existing rates for the given location combos.
-  # Returns the number of rates deleted.
+  # Returns [total_deleted, affected_shipping_option_ids].
   def delete_existing_rates_for_locations(locations)
-    return 0 if locations.empty?
+    return [ 0, Set.new ] if locations.empty?
 
-    total_deleted = 0
-
-    locations.each do |shipping_option_id, country, region|
-      deleted = Rate.where(
-        shipping_option_id: shipping_option_id,
-        country: country,
-        region: region
-      ).delete_all
-
-      total_deleted += deleted
+    # Build a single query using OR conditions to avoid N+1 DELETEs
+    scopes = locations.map do |shipping_option_id, country, region|
+      Rate.where(shipping_option_id: shipping_option_id, country: country, region: region)
     end
+    combined = scopes.reduce { |chain, scope| chain.or(scope) }
 
-    total_deleted
+    affected_ids = locations.map(&:first).to_set
+    total_deleted = combined.delete_all
+
+    [ total_deleted, affected_ids ]
   end
 
   def find_shipping_option(name, row_number)
     return nil if name.blank?
 
-    company.shipping_options.find_by(name: name.strip)
+    @shipping_options_by_name[name.strip]
   end
 
   # Validate numeric values against database constraints
@@ -517,7 +530,7 @@ private
       success: true,
       message: message,
       imported_count: @success_count,
-      replaced_count: @replaced_count,
+      replaced_count: @replaced_count
     }
   end
 
@@ -528,7 +541,7 @@ private
       message: message,
       errors: @errors,
       row_errors: @row_errors,
-      imported_count: 0,
+      imported_count: 0
     }
   end
 end
