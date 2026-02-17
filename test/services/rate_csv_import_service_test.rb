@@ -418,6 +418,175 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
     assert_equal %w[CA MX US], existing_option.countries.sort
   end
 
+  # === Upsert / Replace behavior tests ===
+
+  test "should replace existing rates for the same shipping option, country, and region" do
+    # Create existing rates for Express Shipping, US, CA
+    @shipping_option.rates.create!(country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 5, flat_rate: 10.00, min_charge: 5.00)
+    @shipping_option.rates.create!(country: "US", region: "CA", min_range_lbs: 5, max_range_lbs: 10, flat_rate: 15.00, min_charge: 8.00)
+
+    assert_equal 2, @shipping_option.rates.where(country: "US", region: "CA").count
+
+    csv_content = <<~CSV
+      shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
+      Express Shipping,US,CA,0,10,12.99,6.00
+      Express Shipping,US,CA,10,20,18.99,10.00
+      Express Shipping,US,CA,20,50,25.99,15.00
+    CSV
+
+    file = create_csv_file(csv_content)
+    service = RateCsvImportService.new(company: @company, file: file)
+
+    result = service.call
+
+    assert result[:success]
+    assert_equal 3, result[:imported_count]
+    assert_equal 2, result[:replaced_count]
+
+    # Old rates should be gone, new rates should be present
+    rates = @shipping_option.rates.where(country: "US", region: "CA").order(:min_range_lbs)
+    assert_equal 3, rates.count
+    assert_equal 12.99, rates.first.flat_rate
+    assert_equal 18.99, rates.second.flat_rate
+    assert_equal 25.99, rates.third.flat_rate
+  end
+
+  test "should not affect rates for locations not in the CSV" do
+    # Create rates for two locations
+    @shipping_option.rates.create!(country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00)
+    @shipping_option.rates.create!(country: "US", region: "NY", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 12.00, min_charge: 6.00)
+
+    # Only import for CA — NY should remain untouched
+    csv_content = <<~CSV
+      shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
+      Express Shipping,US,CA,0,5,9.99,5.00
+      Express Shipping,US,CA,5,15,14.99,8.00
+    CSV
+
+    file = create_csv_file(csv_content)
+    service = RateCsvImportService.new(company: @company, file: file)
+
+    result = service.call
+
+    assert result[:success]
+    assert_equal 2, result[:imported_count]
+    assert_equal 1, result[:replaced_count]
+
+    # CA rates were replaced
+    ca_rates = @shipping_option.rates.where(country: "US", region: "CA").order(:min_range_lbs)
+    assert_equal 2, ca_rates.count
+    assert_equal 9.99, ca_rates.first.flat_rate
+
+    # NY rate is untouched
+    ny_rates = @shipping_option.rates.where(country: "US", region: "NY")
+    assert_equal 1, ny_rates.count
+    assert_equal 12.00, ny_rates.first.flat_rate
+  end
+
+  test "should rollback replaced rates when validation fails" do
+    # Create existing rate
+    @shipping_option.rates.create!(country: "US", region: "TX", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00)
+
+    # Import with an invalid row — everything should rollback
+    csv_content = <<~CSV
+      shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
+      Express Shipping,US,TX,0,5,9.99,5.00
+      Express Shipping,INVALID,TX,0,5,9.99,5.00
+    CSV
+
+    file = create_csv_file(csv_content)
+    service = RateCsvImportService.new(company: @company, file: file)
+
+    result = service.call
+
+    assert_not result[:success]
+
+    # Original rate should still exist (rollback)
+    tx_rates = @shipping_option.rates.where(country: "US", region: "TX")
+    assert_equal 1, tx_rates.count
+    assert_equal 10.00, tx_rates.first.flat_rate
+  end
+
+  test "should handle mix of new locations and replacement locations" do
+    # Create existing rate for US/CA
+    @shipping_option.rates.create!(country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00)
+
+    # Import replaces US/CA and adds new US/FL
+    csv_content = <<~CSV
+      shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
+      Express Shipping,US,CA,0,15,12.99,6.00
+      Express Shipping,US,FL,0,10,8.99,4.00
+    CSV
+
+    file = create_csv_file(csv_content)
+    service = RateCsvImportService.new(company: @company, file: file)
+
+    result = service.call
+
+    assert result[:success]
+    assert_equal 2, result[:imported_count]
+    assert_equal 1, result[:replaced_count]
+
+    # CA was replaced
+    ca_rates = @shipping_option.rates.where(country: "US", region: "CA")
+    assert_equal 1, ca_rates.count
+    assert_equal 12.99, ca_rates.first.flat_rate
+
+    # FL was created
+    fl_rates = @shipping_option.rates.where(country: "US", region: "FL")
+    assert_equal 1, fl_rates.count
+    assert_equal 8.99, fl_rates.first.flat_rate
+  end
+
+  test "should treat country-level rates (nil region) separately from regional rates" do
+    # Create country-level rate (no region)
+    @shipping_option.rates.create!(country: "US", region: nil, min_range_lbs: 0, max_range_lbs: 10, flat_rate: 5.00, min_charge: 2.00)
+    # Create regional rate
+    @shipping_option.rates.create!(country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00)
+
+    # Only import country-level — regional should be untouched
+    csv_content = <<~CSV
+      shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
+      Express Shipping,US,,0,20,7.99,3.00
+    CSV
+
+    file = create_csv_file(csv_content)
+    service = RateCsvImportService.new(company: @company, file: file)
+
+    result = service.call
+
+    assert result[:success]
+    assert_equal 1, result[:imported_count]
+    assert_equal 1, result[:replaced_count]
+
+    # Country-level rate was replaced
+    country_rates = @shipping_option.rates.where(country: "US", region: nil)
+    assert_equal 1, country_rates.count
+    assert_equal 7.99, country_rates.first.flat_rate
+
+    # Regional rate untouched
+    ca_rates = @shipping_option.rates.where(country: "US", region: "CA")
+    assert_equal 1, ca_rates.count
+    assert_equal 10.00, ca_rates.first.flat_rate
+  end
+
+  test "success message includes replaced count when rates were replaced" do
+    @shipping_option.rates.create!(country: "US", region: "CA", min_range_lbs: 0, max_range_lbs: 10, flat_rate: 10.00, min_charge: 5.00)
+
+    csv_content = <<~CSV
+      shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge
+      Express Shipping,US,CA,0,10,12.99,6.00
+    CSV
+
+    file = create_csv_file(csv_content)
+    service = RateCsvImportService.new(company: @company, file: file)
+
+    result = service.call
+
+    assert result[:success]
+    assert_includes result[:message], "1 existing rate(s) replaced"
+  end
+
 private
 
   def create_csv_file(content)
