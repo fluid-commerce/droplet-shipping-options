@@ -139,7 +139,6 @@
 function initializeTestConnection() {
   const testBtn = document.getElementById('test-connection-btn');
   if (!testBtn) {
-    console.log('Test connection button not found');
     return;
   }
 
@@ -151,7 +150,6 @@ function initializeTestConnection() {
   // Define the handler
   const handler = async function(e) {
     e.preventDefault();
-    console.log('Test connection button clicked');
 
     const resultDiv = document.getElementById('connection-result');
     const originalBtnText = testBtn.innerHTML;
@@ -161,8 +159,6 @@ function initializeTestConnection() {
     const database = document.querySelector('[name="company[exigo_db_name]"]')?.value;
     const user = document.querySelector('[name="company[exigo_db_user]"]')?.value;
     const password = document.querySelector('[name="company[exigo_db_password]"]')?.value;
-
-    console.log('Form values:', { server, database, user, password: password ? '***' : null });
 
     // Validate fields
     if (!server || !database || !user || !password) {
@@ -184,10 +180,7 @@ function initializeTestConnection() {
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
                        document.querySelector('[name="csrf-token"]')?.content;
 
-      console.log('CSRF token found:', !!csrfToken);
-
       const url = '<%= test_connection_exigo_setting_path(dri: params[:dri]) %>';
-      console.log('Fetching URL:', url);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -204,10 +197,7 @@ function initializeTestConnection() {
         })
       });
 
-      console.log('Response status:', response.status);
-
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (data.success) {
         resultDiv.className = 'p-4 mb-4 bg-green-50 border border-green-200 rounded-lg';
@@ -233,7 +223,6 @@ function initializeTestConnection() {
         `;
       }
     } catch (error) {
-      console.error('Test connection error:', error);
       resultDiv.className = 'p-4 mb-4 bg-red-50 border border-red-200 rounded-lg';
       resultDiv.innerHTML = `
         <div class="flex items-start">
@@ -253,7 +242,6 @@ function initializeTestConnection() {
   // Store the handler and add listener
   testBtn._testConnectionHandler = handler;
   testBtn.addEventListener('click', handler);
-  console.log('Test connection handler attached');
 }
 
 // Initialize on various events to ensure it works with Turbo

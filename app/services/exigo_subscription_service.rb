@@ -46,13 +46,20 @@ private
   end
 
   def subscription_query
+    sub_id = sanitize(@subscription_id).to_i
+    email  = sanitize_string(@email)
+
     <<~SQL.squish
-      SELECT TOP 1 cs.CustomerID
-      FROM CustomerSubscriptions cs
-      INNER JOIN Customers c ON cs.CustomerID = c.CustomerID
-      WHERE cs.SubscriptionID = #{sanitize(@subscription_id)}
-        AND cs.IsActive = 1
-        AND c.Email = '#{sanitize_string(@email)}'
+      EXEC sp_executesql
+        N'SELECT TOP 1 cs.CustomerID
+          FROM CustomerSubscriptions cs
+          INNER JOIN Customers c ON cs.CustomerID = c.CustomerID
+          WHERE cs.SubscriptionID = @sub_id
+            AND cs.IsActive = 1
+            AND c.Email = @email',
+        N'@sub_id INT, @email NVARCHAR(320)',
+        @sub_id = #{sub_id},
+        @email = N'#{email}'
     SQL
   end
 

@@ -55,35 +55,7 @@
       <%= form.select :status, options_for_select([['Active', 'active'], ['Inactive', 'inactive'], ['Draft', 'draft']], @shipping_option.status), {}, class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" %>
     </div>
 
-    <% if yoli_company? && free_shipping_enabled? %>
-      <div class="mt-6 p-6 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300 rounded-xl">
-        <div class="flex items-start">
-          <div class="flex items-center h-5 mt-1">
-            <%= form.check_box :free_for_subscribers,
-                               class: "w-5 h-5 text-purple-600 border-purple-300 rounded focus:ring-purple-500" %>
-          </div>
-          <div class="ml-4 flex-1">
-            <%= form.label :free_for_subscribers,
-                           "🎁 Exclusive for Exigo Subscribers",
-                           class: "block text-base font-semibold text-purple-900 mb-2" %>
-            <div class="space-y-2 text-sm text-purple-800">
-              <p class="font-medium">When enabled, this shipping method will:</p>
-              <ul class="list-disc list-inside space-y-1 ml-2">
-                <li>Be <strong>FREE ($0.00)</strong> automatically for subscribers</li>
-                <li>Only appear for logged-in users with active Exigo subscription (ID <%= @company.exigo_subscription_id || '9' %>)</li>
-                <li>Be <strong>hidden</strong> from non-subscribers</li>
-              </ul>
-            </div>
-            <div class="mt-3 p-3 bg-white/50 rounded-lg border border-purple-200">
-              <p class="text-xs text-purple-700">
-                💡 <strong>Tip:</strong> Name it clearly, e.g., "Free Shipping (Members Only)"
-                so subscribers know it's exclusive for them.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    <% end %>
+    <%= render 'free_for_subscribers_field', form: form %>
 
     <div class="flex justify-end space-x-4 pt-6">
       <%= link_to "Cancel", shipping_methods_shipping_options_path, class: "px-6 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200", data: { turbo_frame: "_top" } %>

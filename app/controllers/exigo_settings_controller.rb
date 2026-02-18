@@ -5,6 +5,10 @@ class ExigoSettingsController < ApplicationController
 
   before_action :ensure_yoli_company
 
+  ALLOWED_SERVER_PATTERN = /\A[a-z0-9]([a-z0-9\-]*[a-z0-9])?
+                             (\.[a-z0-9]([a-z0-9\-]*[a-z0-9])?)*
+                             \.database\.windows\.net\z/ix.freeze
+
   def edit; end
 
   def update
@@ -27,6 +31,13 @@ class ExigoSettingsController < ApplicationController
 
     if server.blank? || database.blank? || user.blank? || password.blank?
       render json: { success: false, error: "All fields are required" }, status: :bad_request
+      return
+    end
+
+    unless server.match?(ALLOWED_SERVER_PATTERN)
+      render json: { success: false,
+                     error: "Invalid server hostname. Must be an Azure SQL Server address (*.database.windows.net)", },
+             status: :bad_request
       return
     end
 
