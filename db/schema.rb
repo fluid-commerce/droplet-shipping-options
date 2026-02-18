@@ -25,12 +25,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_13_115739) do
   end
 
   create_table "cart_sessions", force: :cascade do |t|
-    t.integer "cart_id"
+    t.integer "cart_id", null: false
     t.string "email"
-    t.boolean "has_active_subscription"
+    t.boolean "has_active_subscription", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["cart_id"], name: "index_cart_sessions_on_cart_id"
+    t.index ["cart_id"], name: "index_cart_sessions_on_cart_id", unique: true
   end
 
   create_table "companies", force: :cascade do |t|
@@ -77,15 +77,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_13_115739) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["company_id"], name: "index_integration_settings_on_company_id"
-  end
-
-  create_table "price_types", force: :cascade do |t|
-    t.bigint "company_id", null: false
-    t.string "name", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["company_id", "name"], name: "index_price_types_on_company_id_and_name", unique: true
-    t.index ["company_id"], name: "index_price_types_on_company_id"
   end
 
   create_table "rates", force: :cascade do |t|
@@ -151,7 +142,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_13_115739) do
 
   add_foreign_key "events", "companies"
   add_foreign_key "integration_settings", "companies"
-  add_foreign_key "price_types", "companies"
   add_foreign_key "rates", "shipping_options"
   add_foreign_key "shipping_options", "companies"
 end
