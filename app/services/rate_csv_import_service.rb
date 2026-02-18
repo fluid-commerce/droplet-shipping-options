@@ -79,6 +79,9 @@ private
 
   def read_csv_file
     content = file.respond_to?(:read) ? file.read : File.read(file.path)
+    # Handle encoding: force to UTF-8 and strip BOM if present
+    content = content.force_encoding("UTF-8")
+    content.delete_prefix!("\xEF\xBB\xBF")
     # Store original content for re-reading when applying corrections
     @csv_content = content
     CSV.parse(content, headers: true, header_converters: :symbol)

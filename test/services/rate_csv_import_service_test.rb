@@ -694,6 +694,22 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
     assert_includes result[:message], "1 existing rate(s) replaced"
   end
 
+  test "should handle CSV files with UTF-8 BOM" do
+    csv_content = "\xEF\xBB\xBFshipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge\nExpress Shipping,US,CA,0,5,9.99,5.00\n"
+
+    file = Tempfile.new([ "test_bom", ".csv" ])
+    file.binmode
+    file.write(csv_content)
+    file.rewind
+    uploaded = Rack::Test::UploadedFile.new(file.path, "text/csv", original_filename: "bom_test.csv")
+
+    service = RateCsvImportService.new(company: @company, file: uploaded)
+    result = service.call
+
+    assert result[:success], "Expected success but got: #{result[:message]} #{result[:errors]}"
+    assert_equal 1, result[:imported_count]
+  end
+
 private
 
   def create_csv_file(content)
