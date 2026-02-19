@@ -18,7 +18,7 @@ class Callbacks::CartCallbacksController < ApplicationController
       return render json: { success: false, error: "Cart ID is required" }, status: :bad_request
     end
 
-    if @company.yoli? && @company.free_shipping_enabled? && email.present?
+    if @company.free_shipping_enabled? && email.present?
       has_subscription = ExigoSubscriptionService.new(email, company: @company).has_active_subscription?
 
       Rails.logger.info(

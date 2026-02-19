@@ -221,9 +221,8 @@ private
     end
   end
 
-  # Yoli-specific: Filter shipping options based on subscription status
   def filter_by_subscription_status(shipping_options)
-    return shipping_options unless company.yoli?
+    return shipping_options unless company.free_shipping_enabled?
 
     has_subscription = user_has_active_subscription?
 
@@ -249,12 +248,11 @@ private
     end
   end
 
-  # Yoli-specific: Only read subscription state from cache. We never change state here.
+  # Only read subscription state from cache. We never change state here.
   # State is set only by update_cart_email and cart_customer_logged_in (they check Exigo and store).
   # IMPORTANT: We verify that the cart email matches the cached email to prevent stale subscription state.
   def user_has_active_subscription?
     return false unless @cart_id
-    return false unless company.yoli?
     return false unless company.free_shipping_enabled?
 
     session = CartSessionService.new(@cart_id)

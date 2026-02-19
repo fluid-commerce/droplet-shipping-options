@@ -48,10 +48,6 @@ class Company < ApplicationRecord
     uninstalled_at.present?
   end
 
-  def yoli?
-    name&.downcase&.include?("yoli")
-  end
-
   def free_shipping_enabled?
     free_shipping_for_subscribers == "true" || free_shipping_for_subscribers == true
   end

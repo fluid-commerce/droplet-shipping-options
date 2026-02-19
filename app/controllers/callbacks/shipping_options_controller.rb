@@ -16,12 +16,11 @@ class Callbacks::ShippingOptionsController < ApplicationController
 
     result = service.call
 
-    if result[:success] && @company.yoli?
-      session = CartSessionService.new(payload[:cart][:id])
-      result[:logged_in_email] = session.cached_email if session.cached_email.present?
-    end
-
     if result[:success]
+      if @company.free_shipping_enabled?
+        session = CartSessionService.new(payload[:cart][:id])
+        result[:logged_in_email] = session.cached_email if session.cached_email.present?
+      end
       render json: result, status: :ok
     else
       render json: result, status: :unprocessable_entity

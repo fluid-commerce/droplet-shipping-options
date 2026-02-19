@@ -3,7 +3,6 @@
 class ExigoSettingsController < ApplicationController
   include DriAuthentication
 
-  before_action :ensure_yoli_company
 
   ALLOWED_SERVER_PATTERN = /\A[a-z0-9]([a-z0-9\-]*[a-z0-9])?
                              (\.[a-z0-9]([a-z0-9\-]*[a-z0-9])?)*
@@ -76,13 +75,6 @@ class ExigoSettingsController < ApplicationController
   end
 
 private
-
-  def ensure_yoli_company
-    unless @company&.yoli?
-      redirect_to shipping_options_path(dri: params[:dri]),
-                  alert: "Access denied: This feature is only available for Yoli"
-    end
-  end
 
   def settings_params
     {

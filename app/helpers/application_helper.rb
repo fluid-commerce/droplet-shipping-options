@@ -26,10 +26,6 @@ module ApplicationHelper
     url
   end
 
-  def yoli_company?
-    @company&.yoli?
-  end
-
   def free_shipping_enabled?
     @company&.free_shipping_enabled?
   end

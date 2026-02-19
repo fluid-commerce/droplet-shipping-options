@@ -36,7 +36,7 @@
       Rate Tables
     <% end %>
 
-    <% if yoli_company? %>
+    <% if free_shipping_enabled? %>
       <%= link_to edit_exigo_setting_path,
           class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-purple-50 text-purple-700 border border-purple-200' if is_exigo_settings} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_exigo_settings}",
           data: { turbo_frame: "shipping_content", tab: "exigo_settings" } do %>
