@@ -13,6 +13,31 @@ class Company < ApplicationRecord
 
   after_initialize :set_default_installed_callback_ids, if: :new_record?
 
+  store_accessor :settings, :exigo_db_server, :exigo_db_name, :exigo_db_user, :exigo_db_password,
+                 :exigo_subscription_id, :free_shipping_for_subscribers
+
+  def exigo_db_password=(value)
+    super(value.present? ? self.class.password_encryptor.encrypt_and_sign(value) : value)
+  end
+
+  def exigo_db_password
+    raw = super
+    return raw if raw.blank?
+    self.class.password_encryptor.decrypt_and_verify(raw)
+  rescue ActiveSupport::MessageEncryptor::InvalidMessage, ActiveSupport::MessageVerifier::InvalidSignature
+    raw
+  end
+
+  def self.password_encryptor
+    @password_encryptor ||= begin
+      key = ActiveSupport::KeyGenerator.new(
+        Rails.application.secret_key_base,
+        iterations: 1000
+      ).generate_key("exigo_db_password_encryption", 32)
+      ActiveSupport::MessageEncryptor.new(key)
+    end
+  end
+
   # Check if the company's droplet installation is currently active and installed
   def installed?
     uninstalled_at.nil? && active?
@@ -21,6 +46,10 @@ class Company < ApplicationRecord
   # Check if the company's droplet has been uninstalled
   def uninstalled?
     uninstalled_at.present?
+  end
+
+  def free_shipping_enabled?
+    free_shipping_for_subscribers == "true" || free_shipping_for_subscribers == true
   end
 
 private

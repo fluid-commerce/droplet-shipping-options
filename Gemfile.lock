@@ -378,6 +378,8 @@ GEM
     thruster (0.1.14-x86_64-darwin)
     thruster (0.1.14-x86_64-linux)
     timeout (0.4.3)
+    tiny_tds (3.2.1)
+      bigdecimal (~> 3)
     turbo-rails (2.0.16)
       actionpack (>= 7.1.0)
       railties (>= 7.1.0)
@@ -459,6 +461,7 @@ DEPENDENCIES
   solid_cache
   solid_queue
   thruster
+  tiny_tds
   turbo-rails
   vite_rails (~> 3.0, >= 3.0.19)
   web-console

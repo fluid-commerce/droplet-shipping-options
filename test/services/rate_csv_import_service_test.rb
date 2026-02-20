@@ -695,7 +695,9 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
   end
 
   test "should handle CSV files with UTF-8 BOM" do
-    csv_content = "\xEF\xBB\xBFshipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge\nExpress Shipping,US,CA,0,5,9.99,5.00\n"
+    bom = "\xEF\xBB\xBF"
+    csv_content = "#{bom}shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge\n" \
+                  "Express Shipping,US,CA,0,5,9.99,5.00\n"
 
     file = Tempfile.new([ "test_bom", ".csv" ])
     file.binmode
