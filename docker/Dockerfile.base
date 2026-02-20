@@ -12,6 +12,7 @@ RUN apt-get update -qq && \
     libvips \
     node-gyp \
     libpq-dev \
+    freetds-dev \
     pkg-config \
     libyaml-dev \
     libjemalloc2 \
