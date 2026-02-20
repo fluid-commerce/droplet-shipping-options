@@ -110,6 +110,12 @@ class RatesController < ApplicationController
         csv_content = file_to_use.read
         file_to_use.rewind
 
+        # Handle encoding: uploaded files may arrive as ASCII-8BIT with a
+        # UTF-8 BOM (common when exported from Excel). Force to UTF-8 and
+        # strip the BOM so downstream CSV parsing works cleanly.
+        csv_content = csv_content.force_encoding("UTF-8")
+        csv_content.delete_prefix!("\xEF\xBB\xBF")
+
         # Create a temporary file to store the CSV content
         temp_file = Tempfile.new([ "csv_import_#{session.id}_", ".csv" ], Rails.root.join("tmp"))
         temp_file.write(csv_content)

@@ -1,7 +1,7 @@
 require "csv"
 
 class RateCsvImportService
-  attr_reader :company, :file, :errors, :success_count, :row_errors, :auto_correctable_errors
+  attr_reader :company, :file, :errors, :success_count, :replaced_count, :row_errors, :auto_correctable_errors
 
   def initialize(company:, file:)
     @company = company
@@ -10,6 +10,7 @@ class RateCsvImportService
     @row_errors = []
     @auto_correctable_errors = []
     @success_count = 0
+    @replaced_count = 0
   end
 
   def call(apply_corrections: false)
@@ -78,6 +79,9 @@ private
 
   def read_csv_file
     content = file.respond_to?(:read) ? file.read : File.read(file.path)
+    # Handle encoding: force to UTF-8 and strip BOM if present
+    content = content.force_encoding("UTF-8")
+    content.delete_prefix!("\xEF\xBB\xBF")
     # Store original content for re-reading when applying corrections
     @csv_content = content
     CSV.parse(content, headers: true, header_converters: :symbol)
@@ -99,48 +103,80 @@ private
   end
 
   def import_rates(csv_data, apply_corrections: false)
-    # Pre-scan CSV to create missing shipping options
-    ensure_shipping_options_exist(csv_data)
-
     # Preprocess and sort CSV data for proper import order
     sorted_data = preprocess_and_sort_csv(csv_data)
 
-    # First pass: Validate all rows without saving
-    validated_rates = []
+    # Pre-load shipping options for efficient lookups throughout the import
+    @shipping_options_by_name = company.shipping_options.index_by(&:name)
 
-    sorted_data.each do |row_data|
-      row_number = row_data[:original_row_number]
-      row = row_data[:row]
-
-      begin
-        rate, error = validate_rate_row(row, row_number, validated_rates, apply_corrections: apply_corrections)
-        if error
-          @row_errors << error
-        elsif rate
-          validated_rates << { rate: rate, row_number: row_number }
-        end
-      rescue StandardError => e
-        @row_errors << { row: row_number, errors: [ e.message ], data: row.to_h }
-      end
-    end
-
-    # If any errors, don't import anything
-    # (When apply_corrections is true, auto-correctable errors are already fixed)
-    # But we still need to check for non-correctable errors
-    if @row_errors.any?
-      Rails.logger.warn "[CSV Import] Found #{@row_errors.count} errors after validation"
-      @row_errors.each do |error|
-        Rails.logger.warn "[CSV Import] Row #{error[:row]}: #{error[:errors].join(', ')}"
-      end
-      return
-    end
-
-    # Second pass: All validations passed, save all records in a transaction
+    # Everything happens in a single transaction so that shipping option
+    # changes, rate deletions, and new rate inserts all roll back together
+    # if anything fails.
     ActiveRecord::Base.transaction do
+      # Create or update shipping options for methods referenced in the CSV
+      ensure_shipping_options_exist(csv_data)
+
+      # Reload the lookup hash to include any newly created shipping options
+      @shipping_options_by_name = company.shipping_options.reload.index_by(&:name)
+
+      # Determine which (shipping_option, country, region) combos are in the
+      # CSV so we can replace existing rates for those locations.
+      locations_to_replace = collect_locations_to_replace(sorted_data)
+
+      # Delete existing rates for locations present in the CSV.
+      # This turns the import into an upsert: locations in the CSV get fully
+      # replaced, while locations NOT in the CSV remain untouched.
+      # Uses delete_all for performance; cache invalidation is handled
+      # explicitly below since delete_all skips AR callbacks.
+      @replaced_count, @affected_shipping_option_ids = delete_existing_rates_for_locations(locations_to_replace)
+
+      if @replaced_count > 0
+        Rails.logger.info "[CSV Import] Replaced #{@replaced_count} existing rate(s) " \
+                          "for #{locations_to_replace.size} location(s)"
+      end
+
+      # Validate all rows (now that conflicting DB records are removed)
+      validated_rates = []
+
+      sorted_data.each do |row_data|
+        row_number = row_data[:original_row_number]
+        row = row_data[:row]
+
+        begin
+          rate, error = validate_rate_row(row, row_number, validated_rates, apply_corrections: apply_corrections)
+          if error
+            @row_errors << error
+          elsif rate
+            validated_rates << { rate: rate, row_number: row_number }
+          end
+        rescue StandardError => e
+          @row_errors << { row: row_number, errors: [ e.message ], data: row.to_h }
+        end
+      end
+
+      # If any errors, roll back everything (deletes + shipping option changes)
+      if @row_errors.any?
+        Rails.logger.warn "[CSV Import] Found #{@row_errors.count} errors after validation"
+        @row_errors.each do |error|
+          Rails.logger.warn "[CSV Import] Row #{error[:row]}: #{error[:errors].join(', ')}"
+        end
+        @replaced_count = 0
+        @success_count = 0
+        raise ActiveRecord::Rollback
+      end
+
+      # All validations passed — save all new rates
       validated_rates.each do |item|
         item[:rate].save!
         @success_count += 1
       end
+    end
+
+    # Explicitly invalidate cache for shipping options whose rates were
+    # deleted via delete_all (which skips AR callbacks). The newly inserted
+    # rates trigger after_commit callbacks too, but this covers the delete side.
+    if @affected_shipping_option_ids&.any?
+      ShippingOption.where(id: @affected_shipping_option_ids.to_a).find_each(&:invalidate_cache!)
     end
   end
 
@@ -372,10 +408,49 @@ private
     end
   end
 
+  # Collect unique (shipping_option_id, country, region) combos from the CSV
+  # so we know which existing rates to replace.
+  def collect_locations_to_replace(sorted_data)
+    locations = Set.new
+
+    sorted_data.each do |row_data|
+      row = row_data[:row]
+      method_name = row[:shipping_method]&.strip
+      next if method_name.blank?
+
+      shipping_option = @shipping_options_by_name[method_name]
+      next unless shipping_option
+
+      country = row[:country]&.strip&.upcase
+      region = row[:region]&.strip.presence
+
+      locations.add([ shipping_option.id, country, region ])
+    end
+
+    locations.to_a
+  end
+
+  # Delete existing rates for the given location combos.
+  # Returns [total_deleted, affected_shipping_option_ids].
+  def delete_existing_rates_for_locations(locations)
+    return [ 0, Set.new ] if locations.empty?
+
+    # Build a single query using OR conditions to avoid N+1 DELETEs
+    scopes = locations.map do |shipping_option_id, country, region|
+      Rate.where(shipping_option_id: shipping_option_id, country: country, region: region)
+    end
+    combined = scopes.reduce { |chain, scope| chain.or(scope) }
+
+    affected_ids = locations.to_set(&:first)
+    total_deleted = combined.delete_all
+
+    [ total_deleted, affected_ids ]
+  end
+
   def find_shipping_option(name, row_number)
     return nil if name.blank?
 
-    company.shipping_options.find_by(name: name.strip)
+    @shipping_options_by_name[name.strip]
   end
 
   # Validate numeric values against database constraints
@@ -449,10 +524,17 @@ private
   end
 
   def success
+    message = if @replaced_count > 0
+      "Successfully imported #{@success_count} rate(s) (#{@replaced_count} existing rate(s) replaced)"
+    else
+      "Successfully imported #{@success_count} rate(s)"
+    end
+
     {
       success: true,
-      message: "Successfully imported #{@success_count} rate(s)",
+      message: message,
       imported_count: @success_count,
+      replaced_count: @replaced_count,
     }
   end
 

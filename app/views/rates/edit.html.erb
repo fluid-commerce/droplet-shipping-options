@@ -92,55 +92,34 @@
 
 <script>
 
-// Fallback function with hardcoded regions for major countries
-function getFallbackRegions(countryCode) {
-  const fallbackData = {
-    'US': ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'],
-    'AR': ['Buenos Aires', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'],
-    'CA': ['Alberta', 'British Columbia', 'Manitoba', 'New Brunswick', 'Newfoundland and Labrador', 'Northwest Territories', 'Nova Scotia', 'Nunavut', 'Ontario', 'Prince Edward Island', 'Quebec', 'Saskatchewan', 'Yukon'],
-    'MX': ['Aguascalientes', 'Baja California', 'Baja California Sur', 'Campeche', 'Chiapas', 'Chihuahua', 'Coahuila', 'Colima', 'Durango', 'Guanajuato', 'Guerrero', 'Hidalgo', 'Jalisco', 'México', 'Michoacán', 'Morelos', 'Nayarit', 'Nuevo León', 'Oaxaca', 'Puebla', 'Querétaro', 'Quintana Roo', 'San Luis Potosí', 'Sinaloa', 'Sonora', 'Tabasco', 'Tamaulipas', 'Tlaxcala', 'Veracruz', 'Yucatán', 'Zacatecas'],
-    'BR': ['Acre', 'Alagoas', 'Amapá', 'Amazonas', 'Bahia', 'Ceará', 'Distrito Federal', 'Espírito Santo', 'Goiás', 'Maranhão', 'Mato Grosso', 'Mato Grosso do Sul', 'Minas Gerais', 'Pará', 'Paraíba', 'Paraná', 'Pernambuco', 'Piauí', 'Rio de Janeiro', 'Rio Grande do Norte', 'Rio Grande do Sul', 'Rondônia', 'Roraima', 'Santa Catarina', 'São Paulo', 'Sergipe', 'Tocantins']
-  };
-  
-  return fallbackData[countryCode] || ['No regions available'];
-}
-
 // Function to load regions for a country
 function loadRegionsForCountry(countryCode, regionChoicesInstance, currentRegionValue = null) {
   if (!countryCode || !regionChoicesInstance) {
     console.error('Invalid parameters for loadRegionsForCountry');
     return;
   }
-  
-  
-  // Get regions from hardcoded data
-  const regions = getFallbackRegions(countryCode);
-  
-  const regionOptions = regions.map(region => ({
-    value: region,
-    label: region
-  }));
-  
-  // Clear existing choices first
-  try {
-    regionChoicesInstance.clearChoices();
-    
-    if (regionOptions.length > 0) {
-      // Set all region options at once (don't select first by default)
-      regionChoicesInstance.setChoices(regionOptions, 'value', 'label', false);
-      
-      // Set current region if provided
-      if (currentRegionValue) {
-        regionChoicesInstance.setChoiceByValue(currentRegionValue);
+
+  fetch(`/api/geography/states?country_code=${encodeURIComponent(countryCode)}`)
+    .then(response => response.json())
+    .then(regionOptions => {
+      try {
+        regionChoicesInstance.clearChoices();
+
+        if (regionOptions.length > 0) {
+          regionChoicesInstance.setChoices(regionOptions, 'value', 'label', false);
+
+          if (currentRegionValue) {
+            regionChoicesInstance.setChoiceByValue(currentRegionValue);
+          }
+        }
+      } catch (error) {
+        console.error('Error updating Choices:', error);
       }
-    } else {
-      // Set a placeholder option when no regions are available
-      regionChoicesInstance.setChoices([{ value: '', label: 'No regions available' }], 'value', 'label', false);
-    }
-    
-  } catch (error) {
-    console.error('Error updating Choices:', error);
-  }
+    })
+    .catch(error => {
+      console.error('Error loading regions:', error);
+      regionChoicesInstance.clearChoices();
+    });
 }
 
 // Function to initialize the form
@@ -186,14 +165,9 @@ function initializeRateEditForm() {
            setTimeout(() => {
 
            // Load countries from API
-           fetch('https://restcountries.com/v3.1/all?fields=name,cca2')
+           fetch('/api/geography/countries')
              .then(response => response.json())
-             .then(countries => {
-
-               const countryOptions = countries.map(country => ({
-                 value: country.cca2,
-                 label: `${country.name.common} (${country.cca2})`
-               }));
+             .then(countryOptions => {
 
 
                // Initialize Choices for countries

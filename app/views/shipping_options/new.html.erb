@@ -94,14 +94,9 @@ function initializeShippingNewForm() {
     }
     
     // Load countries data first, then initialize Choices
-    fetch('https://restcountries.com/v3.1/all?fields=name,cca2')
+    fetch('/api/geography/countries')
       .then(response => response.json())
-      .then(countries => {
-        
-        const countryOptions = countries.map(country => ({
-          value: country.cca2,
-          label: `${country.name.common} (${country.cca2})`
-        })).sort((a, b) => a.label.localeCompare(b.label));
+      .then(countryOptions => {
 
 
         // Initialize Choices for countries with options

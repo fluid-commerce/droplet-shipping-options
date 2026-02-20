@@ -20,6 +20,8 @@ Rails.application.routes.draw do
         put :bulk_update
       end
     end
+    get "geography/countries", to: "geography#countries"
+    get "geography/states", to: "geography#states"
   end
 
   namespace :admin do
