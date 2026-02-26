@@ -117,7 +117,7 @@ private
   def success_result(shipping_options)
     {
       success: true,
-      shipping_options: shipping_options.to_a.uniq(&:id).map { |option| serialize_shipping_option(option) },
+      shipping_options: shipping_options.to_a.uniq(&:id).filter_map { |option| serialize_shipping_option(option) },
     }
   end
 
@@ -138,12 +138,12 @@ private
 
   def serialize_shipping_option(shipping_option)
     rate = find_best_rate(shipping_option)
-    calculated_total = calculate_shipping_total(shipping_option, rate)
+    return nil unless rate
 
     final_total = if shipping_option.free_for_subscribers? && user_has_active_subscription?
       0
     else
-      calculated_total
+      [ rate.flat_rate, rate.min_charge ].max
     end
 
     {
@@ -163,14 +163,6 @@ private
     # Fall back to country-level rate if no region-specific rate found
     shipping_option.rates.find do |rate|
       rate_matches_country_only?(rate) && rate_matches_weight_range?(rate)
-    end
-  end
-
-  def calculate_shipping_total(shipping_option, rate)
-    if rate
-      [ rate.flat_rate, rate.min_charge ].max
-    else
-      shipping_option.starting_rate.to_f
     end
   end
 

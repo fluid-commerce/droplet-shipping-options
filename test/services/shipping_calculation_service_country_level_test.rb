@@ -157,7 +157,7 @@ class ShippingCalculationServiceCountryLevelTest < ActiveSupport::TestCase
     assert_equal 14.99, express_option[:shipping_total]
   end
 
-  test "should use starting_rate when neither region-specific nor country-level rate matches" do
+  test "should exclude shipping option when neither region-specific nor country-level rate matches" do
     # Create rate for different country
     @shipping_option.rates.create!(
       country: "CA",
@@ -178,10 +178,9 @@ class ShippingCalculationServiceCountryLevelTest < ActiveSupport::TestCase
     result = service.call
 
     assert result[:success]
-    # Should use shipping_option's starting_rate since no matching rate
+    # Should not include shipping option since no matching rate for US
     express_option = result[:shipping_options].find { |opt| opt[:shipping_title] == "Express Shipping" }
-    assert_not_nil express_option
-    assert_equal 15.99, express_option[:shipping_total]
+    assert_nil express_option
   end
 
   test "rate_matches_location_exact should only match when region is present and matches" do

@@ -95,16 +95,24 @@ class ShippingCalculationServiceTest < ActiveSupport::TestCase
     assert_equal 15.99, express_option[:shipping_total]
   end
 
-  test "should use starting_rate when no specific rate exists" do
+  test "should exclude shipping option when no matching rate exists" do
     result = @service.call
 
     assert result[:success]
     express_option = result[:shipping_options].find { |opt| opt[:shipping_title] == "Express Shipping" }
-    assert_not_nil express_option
-    assert_equal 15.99, express_option[:shipping_total]
+    assert_nil express_option
   end
 
   test "should format delivery time correctly" do
+    @shipping_option.rates.create!(
+      country: "US",
+      region: "CA",
+      min_range_lbs: 0,
+      max_range_lbs: 100,
+      flat_rate: 10.00,
+      min_charge: 0
+    )
+
     result = @service.call
 
     assert result[:success]
