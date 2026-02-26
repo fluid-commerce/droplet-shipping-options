@@ -9,12 +9,18 @@ class Callbacks::ShippingOptionsController < ApplicationController
       company: @company,
       ship_to_country: @ship_to_country,
       ship_to_state: @ship_to_state,
-      items: payload[:cart][:items]
+      items: payload[:cart][:items],
+      cart_id: payload[:cart][:id],
+      cart_email: payload[:cart][:email]
     )
 
     result = service.call
 
     if result[:success]
+      if @company.free_shipping_enabled?
+        session = CartSessionService.new(payload[:cart][:id])
+        result[:logged_in_email] = session.cached_email if session.cached_email.present?
+      end
       render json: result, status: :ok
     else
       render json: result, status: :unprocessable_entity
@@ -66,8 +72,8 @@ private
       return
     end
 
-    @ship_to_country = ship_to[:country_code]
-    @ship_to_state = ship_to[:state]
+    @ship_to_country = ship_to[:country_code]&.to_s&.upcase&.presence
+    @ship_to_state = ship_to[:state]&.to_s&.upcase&.presence
 
     unless @ship_to_country.present?
       render json: {
@@ -90,6 +96,7 @@ private
     @payload ||= params.permit(
       cart: [
         :id,
+        :email,
         items: [
           :id,
           :name,

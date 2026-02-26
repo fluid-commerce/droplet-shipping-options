@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_30_004116) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_13_115739) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -22,6 +22,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_30_004116) do
     t.boolean "active"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "cart_sessions", force: :cascade do |t|
+    t.integer "cart_id", null: false
+    t.string "email"
+    t.boolean "has_active_subscription", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cart_id"], name: "index_cart_sessions_on_cart_id", unique: true
   end
 
   create_table "companies", force: :cascade do |t|
@@ -104,7 +113,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_30_004116) do
     t.bigint "company_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "country_sort_positions", default: {}
+    t.boolean "free_for_subscribers"
     t.index ["company_id"], name: "index_shipping_options_on_company_id"
+    t.index ["country_sort_positions"], name: "index_shipping_options_on_country_sort_positions", using: :gin
   end
 
   create_table "users", force: :cascade do |t|

@@ -25,4 +25,8 @@ module ApplicationHelper
 
     url
   end
+
+  def free_shipping_enabled?
+    @company&.free_shipping_enabled?
+  end
 end
