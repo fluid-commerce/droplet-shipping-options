@@ -289,10 +289,11 @@ private
     country = rate.country
     region = rate.region
 
-    # Find rates in the batch for the same location
+    # Find rates in the batch for the same shipping option and location
     same_location_rates = validated_rates_in_batch.select do |item|
       item_rate = item[:rate]
-      item_rate.country == country && item_rate.region == region
+      item_rate.shipping_option == rate.shipping_option &&
+        item_rate.country == country && item_rate.region == region
     end
 
     # Check if this is the first rate for this location (considering both database and batch)
