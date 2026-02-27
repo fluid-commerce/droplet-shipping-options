@@ -18,12 +18,17 @@ class DropletInstalledJob < WebhookEventJob
 
     company = Company.find_by(fluid_shop: company_attributes["fluid_shop"]) || Company.new
 
-    # Log if this is a reinstallation
-    if company.persisted? && company.droplet_installation_uuid != company_attributes["droplet_installation_uuid"]
+    # Handle reinstallation: store old DRI before updating
+    if company.persisted? && company.droplet_installation_uuid.present? &&
+       company.droplet_installation_uuid != company_attributes["droplet_installation_uuid"]
       Rails.logger.info(
         "[DropletInstalledJob] Reinstallation detected for #{company.fluid_shop}. " \
         "Old DRI: #{company.droplet_installation_uuid}, New DRI: #{company_attributes['droplet_installation_uuid']}"
       )
+      # Store old DRI for lookup (keep last 5 to prevent unbounded growth)
+      old_dris = (company.previous_dris || []).dup
+      old_dris.unshift(company.droplet_installation_uuid) unless old_dris.include?(company.droplet_installation_uuid)
+      company.previous_dris = old_dris.first(5)
     end
 
     company.assign_attributes(company_attributes.slice(
