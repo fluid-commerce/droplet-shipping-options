@@ -48,11 +48,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_13_115739) do
     t.datetime "updated_at", null: false
     t.string "droplet_installation_uuid"
     t.jsonb "installed_callback_ids", default: []
+    t.jsonb "previous_dris", default: [], null: false
     t.index ["active"], name: "index_companies_on_active"
     t.index ["authentication_token"], name: "index_companies_on_authentication_token", unique: true
     t.index ["company_droplet_uuid"], name: "index_companies_on_company_droplet_uuid"
     t.index ["fluid_company_id"], name: "index_companies_on_fluid_company_id"
     t.index ["fluid_shop"], name: "index_companies_on_fluid_shop"
+    t.index ["previous_dris"], name: "index_companies_on_previous_dris", using: :gin
   end
 
   create_table "events", force: :cascade do |t|
