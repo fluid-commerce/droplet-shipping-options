@@ -137,17 +137,19 @@ private
   end
 
   def serialize_shipping_option(shipping_option)
+    if shipping_option.free_for_subscribers? && user_has_active_subscription?
+      return {
+        shipping_total: 0,
+        shipping_title: shipping_option.name,
+        shipping_delivery_time_estimate: format_delivery_time(shipping_option.delivery_time),
+      }
+    end
+
     rate = find_best_rate(shipping_option)
     return nil unless rate
 
-    final_total = if shipping_option.free_for_subscribers? && user_has_active_subscription?
-      0
-    else
-      [ rate.flat_rate, rate.min_charge ].max
-    end
-
     {
-      shipping_total: final_total,
+      shipping_total: [ rate.flat_rate, rate.min_charge ].max,
       shipping_title: shipping_option.name,
       shipping_delivery_time_estimate: format_delivery_time(shipping_option.delivery_time),
     }
