@@ -69,9 +69,11 @@ private
       database: @company.settings["exigo_db_name"],
       username: @company.settings["exigo_db_user"],
       password: @company.settings["exigo_db_password"],
+      port: 1433,
+      tds_version: "7.3",
+      azure: true,
       timeout: 5,
-      connect_timeout: 5,
-      azure: true
+      connect_timeout: 5
     )
   end
 
