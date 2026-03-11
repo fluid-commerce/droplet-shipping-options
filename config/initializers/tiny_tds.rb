@@ -5,7 +5,7 @@
 # username mangling breaks authentication for non-Azure-hosted SQL Servers
 # like sandbox.bi.exigo.com.
 TinyTds::Client.class_eval do
-  private
+private
 
   alias_method :original_parse_username, :parse_username
 
