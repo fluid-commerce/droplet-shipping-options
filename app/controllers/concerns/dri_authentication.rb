@@ -123,7 +123,8 @@ private
     company = Company.where("previous_dris @> ?", [old_dri].to_json).first
 
     if company
-      Rails.logger.info "[DRI] Found reinstalled company #{company.fluid_shop} with current DRI: #{company.droplet_installation_uuid}"
+      Rails.logger.info "[DRI] Found reinstalled company #{company.fluid_shop} " \
+                        "with current DRI: #{company.droplet_installation_uuid}"
     end
 
     company
