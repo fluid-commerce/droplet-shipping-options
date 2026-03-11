@@ -36,8 +36,7 @@ class ExigoSettingsController < ApplicationController
         username: user,
         password: password,
         timeout: 5,
-        connect_timeout: 5,
-        azure: true
+        connect_timeout: 5
       )
 
       # Execute a simple query to verify the connection works
