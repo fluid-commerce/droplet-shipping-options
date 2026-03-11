@@ -120,7 +120,7 @@ private
     Rails.logger.info "[DRI] Checking for potential reinstallation related to: #{old_dri}"
 
     # Search for company where the old DRI exists in their previous_dris array
-    company = Company.where("previous_dris @> ?", [old_dri].to_json).first
+    company = Company.where("previous_dris @> ?", [ old_dri ].to_json).first
 
     if company
       Rails.logger.info "[DRI] Found reinstalled company #{company.fluid_shop} " \
