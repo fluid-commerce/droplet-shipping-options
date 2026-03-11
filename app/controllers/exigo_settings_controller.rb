@@ -35,6 +35,9 @@ class ExigoSettingsController < ApplicationController
         database: database,
         username: user,
         password: password,
+        port: 1433,
+        tds_version: "7.3",
+        azure: true,
         timeout: 5,
         connect_timeout: 5
       )
