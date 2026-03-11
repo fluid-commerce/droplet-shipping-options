@@ -70,8 +70,7 @@ private
       username: @company.settings["exigo_db_user"],
       password: @company.settings["exigo_db_password"],
       timeout: 5,
-      connect_timeout: 5,
-      azure: true
+      connect_timeout: 5
     )
   end
 
