@@ -14,7 +14,7 @@ class Company < ApplicationRecord
   after_initialize :set_defaults, if: :new_record?
 
   store_accessor :settings, :exigo_db_server, :exigo_db_name, :exigo_db_user, :exigo_db_password,
-                 :exigo_subscription_id, :free_shipping_for_subscribers
+                 :exigo_subscription_id, :free_shipping_for_subscribers, :fluid_subscription_product_id
 
   def exigo_db_password=(value)
     super(value.present? ? self.class.password_encryptor.encrypt_and_sign(value) : value)

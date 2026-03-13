@@ -41,7 +41,7 @@
           class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-purple-50 text-purple-700 border border-purple-200' if is_exigo_settings} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_exigo_settings}",
           data: { turbo_frame: "shipping_content", tab: "exigo_settings" } do %>
         <i class="fa-solid fa-gear mr-2"></i>
-        Exigo Settings
+        Subscriber Settings
       <% end %>
     <% end %>
   </nav>
@@ -132,7 +132,7 @@ function initializeNavigation() {
       }
 
       // Check for Exigo Settings
-      if (contentText.includes('Exigo Integration Settings') || contentText.includes('Exigo API')) {
+      if (contentText.includes('Subscriber Settings') || contentText.includes('Exigo Integration Settings') || contentText.includes('Exigo API')) {
         return 'exigo_settings';
       }
     }

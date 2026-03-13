@@ -19,7 +19,7 @@ class Callbacks::CartCallbacksController < ApplicationController
     end
 
     if @company.free_shipping_enabled? && email.present?
-      has_subscription = ExigoSubscriptionService.new(email, company: @company).has_active_subscription?
+      has_subscription = SubscriptionCheckService.new(email, company: @company).has_active_subscription?
 
       Rails.logger.info(
         "[CartCallback:logged_in] has_subscription=#{has_subscription}"
