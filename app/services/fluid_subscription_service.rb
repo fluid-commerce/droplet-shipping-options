@@ -66,7 +66,7 @@ private
     return [] unless response.code == 200
 
     orders = response.parsed_response&.dig("orders") || []
-    Rails.logger.info("[FluidSubscription] Found #{orders.size} orders in last 12 months for customer_id=#{customer_id}")
+    Rails.logger.info("[FluidSubscription] Found #{orders.size} orders in last 12 months for id=#{customer_id}")
     orders
   end
 
