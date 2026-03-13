@@ -77,6 +77,7 @@ private
         exigo_db_password: params.dig(:company, :exigo_db_password),
         exigo_subscription_id: params.dig(:company, :exigo_subscription_id),
         free_shipping_for_subscribers: params.dig(:company, :free_shipping_for_subscribers) == "1",
+        fluid_subscription_product_id: params.dig(:company, :fluid_subscription_product_id),
       },
     }
   end

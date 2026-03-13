@@ -100,7 +100,7 @@ private
     # cached options across all states within a country.
     cache_key = "shipping_opts:#{company.id}:#{ship_to_country}"
 
-    base_options = Rails.cache.fetch(cache_key, expires_in: SHIPPING_OPTIONS_CACHE_TTL) do
+    Rails.cache.fetch(cache_key, expires_in: SHIPPING_OPTIONS_CACHE_TTL) do
       Rails.logger.info "[ShippingCalc] Cache miss for #{cache_key}, querying database"
       company.shipping_options
              .active
@@ -109,16 +109,14 @@ private
              .ordered_for_country(ship_to_country)
              .to_a
     end
-
-    # Filter options based on subscription status (Yoli-specific feature)
-    filter_by_subscription_status(base_options)
   end
 
   def success_result(shipping_options)
-    {
-      success: true,
-      shipping_options: shipping_options.to_a.uniq(&:id).filter_map { |option| serialize_shipping_option(option) },
-    }
+    serialized = shipping_options.to_a.uniq(&:id).filter_map { |option| serialize_shipping_option(option) }
+
+    apply_free_shipping_for_subscribers!(serialized)
+
+    { success: true, shipping_options: serialized }
   end
 
   def default_shipping_result
@@ -137,14 +135,6 @@ private
   end
 
   def serialize_shipping_option(shipping_option)
-    if shipping_option.free_for_subscribers? && user_has_active_subscription?
-      return {
-        shipping_total: 0,
-        shipping_title: shipping_option.name,
-        shipping_delivery_time_estimate: format_delivery_time(shipping_option.delivery_time),
-      }
-    end
-
     rate = find_best_rate(shipping_option)
     return nil unless rate
 
@@ -215,35 +205,23 @@ private
     end
   end
 
-  def filter_by_subscription_status(shipping_options)
-    return shipping_options unless company.free_shipping_enabled?
+  def apply_free_shipping_for_subscribers!(serialized)
+    return unless company.free_shipping_enabled?
+    return unless user_has_active_subscription?
+    return if serialized.empty?
 
-    has_subscription = user_has_active_subscription?
+    cheapest = serialized.min_by { |opt| opt[:shipping_total] }
 
-    shipping_options.select do |option|
-      # If the method requires subscription, only include it if user has it
-      if option.free_for_subscribers?
-        if has_subscription
-          Rails.logger.info(
-            "[ShippingCalc] Including subscriber-only option: #{option.name}"
-          )
-          true
-        else
-          Rails.logger.info(
-            "[ShippingCalc] Excluding subscriber-only option: #{option.name} " \
-            "(user not subscribed)"
-          )
-          false
-        end
-      else
-        # Normal options always included
-        true
-      end
-    end
+    Rails.logger.info(
+      "[ShippingCalc] Applying Yoli+ free shipping to cheapest option: #{cheapest[:shipping_title]}"
+    )
+
+    cheapest[:shipping_total] = 0
+    cheapest[:shipping_title] = "#{cheapest[:shipping_title]} (Yoli+ FREE Shipping)"
   end
 
   # Only read subscription state from cache. We never change state here.
-  # State is set only by update_cart_email and cart_customer_logged_in (they check Exigo and store).
+  # State is set only by update_cart_email and cart_customer_logged_in (they check Exigo/Fluid and store).
   # IMPORTANT: We verify that the cart email matches the cached email to prevent stale subscription state.
   def user_has_active_subscription?
     return false unless @cart_id
