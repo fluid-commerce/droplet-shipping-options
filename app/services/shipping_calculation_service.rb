@@ -217,7 +217,6 @@ private
     )
 
     cheapest[:shipping_total] = 0
-    cheapest[:shipping_title] = "#{cheapest[:shipping_title]} (Yoli+ FREE Shipping)"
   end
 
   # Only read subscription state from cache. We never change state here.
