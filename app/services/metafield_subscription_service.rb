@@ -10,6 +10,7 @@ class MetafieldSubscriptionService
 
   def has_active_subscription?
     return false if @email.blank?
+    return false if @company.blank?
 
     customer_id = find_customer_id
     return false unless customer_id
@@ -81,6 +82,7 @@ private
     {
       "Authorization" => "Bearer #{@company.authentication_token}",
       "Content-Type" => "application/json",
+      "x-fluid-client" => "fluid-middleware",
     }
   end
 end
