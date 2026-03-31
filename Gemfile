@@ -9,7 +9,6 @@ gem "bootsnap", require: false
 gem "devise", "~> 4.9"
 gem "httparty", "~> 0.23.1"
 gem "jbuilder"
-gem "tiny_tds"
 gem "json_schemer", "~> 2.4"
 gem "active_model_serializers"
 gem "kamal", require: false

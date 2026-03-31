@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_13_115739) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_16_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -25,12 +25,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_13_115739) do
   end
 
   create_table "cart_sessions", force: :cascade do |t|
-    t.integer "cart_id", null: false
+    t.integer "cart_id"
     t.string "email"
-    t.boolean "has_active_subscription", default: false, null: false
+    t.boolean "has_active_subscription"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["cart_id"], name: "index_cart_sessions_on_cart_id", unique: true
+    t.index ["cart_id"], name: "index_cart_sessions_on_cart_id"
   end
 
   create_table "companies", force: :cascade do |t|
@@ -81,6 +81,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_13_115739) do
     t.index ["company_id"], name: "index_integration_settings_on_company_id"
   end
 
+  create_table "price_types", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "name"], name: "index_price_types_on_company_id_and_name", unique: true
+    t.index ["company_id"], name: "index_price_types_on_company_id"
+  end
+
   create_table "rates", force: :cascade do |t|
     t.bigint "shipping_option_id", null: false
     t.string "country", null: false
@@ -116,7 +125,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_13_115739) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "country_sort_positions", default: {}
-    t.boolean "free_for_subscribers"
     t.index ["company_id"], name: "index_shipping_options_on_company_id"
     t.index ["country_sort_positions"], name: "index_shipping_options_on_country_sort_positions", using: :gin
   end
@@ -144,6 +152,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_13_115739) do
 
   add_foreign_key "events", "companies"
   add_foreign_key "integration_settings", "companies"
+  add_foreign_key "price_types", "companies"
   add_foreign_key "rates", "shipping_options"
   add_foreign_key "shipping_options", "companies"
 end

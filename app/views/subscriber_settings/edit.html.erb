@@ -1,0 +1,58 @@
+<% content_for :title, "Subscriber Settings" %>
+
+<%= turbo_frame_tag "shipping_content" do %>
+<div class="max-w-4xl mx-auto py-8 px-4">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Subscriber Settings</h1>
+    <p class="text-gray-600">Configure free shipping for Yoli+ subscribers</p>
+  </div>
+
+  <%= form_with url: subscriber_setting_path(dri: params[:dri]),
+                method: :patch,
+                local: true,
+                class: "space-y-8" do |f| %>
+
+    <!-- Free Shipping Feature -->
+    <div class="bg-gradient-to-r from-purple-50 to-pink-50 shadow-sm rounded-xl border-2 border-purple-300 p-6">
+      <div class="flex items-start">
+        <div class="flex items-center h-5 mt-1">
+          <%= check_box_tag "company[free_shipping_for_subscribers]",
+                            "1",
+                            @company.free_shipping_enabled?,
+                            class: "w-5 h-5 text-purple-600 border-purple-300 rounded focus:ring-purple-500" %>
+        </div>
+        <div class="ml-4 flex-1">
+          <%= label_tag "company[free_shipping_for_subscribers]",
+                        "Enable Free Shipping for Yoli+ Subscribers",
+                        class: "block text-lg font-semibold text-purple-900 mb-3" %>
+
+          <div class="space-y-3 text-sm text-purple-800">
+            <p class="font-medium">When enabled, this feature will:</p>
+            <ul class="list-disc list-inside space-y-2 ml-2">
+              <li>Verify Yoli+ subscription via Fluid metafields when customers log in</li>
+              <li>Apply free shipping to the cheapest shipping method for subscribers</li>
+              <li>Modify the cheapest option title to show "Yoli+ FREE Shipping"</li>
+              <li>Cache subscription status to improve performance</li>
+            </ul>
+          </div>
+
+          <div class="mt-4 p-3 bg-purple-100 rounded-lg">
+            <p class="text-xs text-purple-700">
+              Subscription data is managed by fluid-middleware (daily sync + webhook).
+              The droplet reads the <code>yoli_plus.subscription_status</code> metafield from Fluid to determine subscriber status.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="flex justify-between items-center">
+      <%= link_to "Cancel", shipping_options_path(dri: params[:dri]),
+                  class: "px-6 py-2 text-gray-700 hover:text-gray-900 font-medium" %>
+      <%= submit_tag "Save Settings",
+                     class: "px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-colors" %>
+    </div>
+  <% end %>
+</div>
+<% end %>

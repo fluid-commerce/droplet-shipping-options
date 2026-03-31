@@ -5,7 +5,7 @@
       is_shipping_methods = controller_name == 'shipping_options' && action_name == 'shipping_methods'
       is_sort_order = controller_name == 'shipping_options' && action_name == 'sort_order'
       is_rate_tables = controller_name == 'rates' && action_name == 'index' && !params[:shipping_option_id]
-      is_exigo_settings = controller_name == 'exigo_settings' && action_name == 'edit'
+      is_subscriber_settings = controller_name == 'subscriber_settings' && action_name == 'edit'
     %>
 
     <%= link_to shipping_options_path,
@@ -37,9 +37,9 @@
     <% end %>
 
     <% if free_shipping_enabled? %>
-      <%= link_to edit_exigo_setting_path,
-          class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-purple-50 text-purple-700 border border-purple-200' if is_exigo_settings} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_exigo_settings}",
-          data: { turbo_frame: "shipping_content", tab: "exigo_settings" } do %>
+      <%= link_to edit_subscriber_setting_path,
+          class: "nav-tab flex items-center px-6 py-3 text-sm font-medium rounded-xl #{'bg-purple-50 text-purple-700 border border-purple-200' if is_subscriber_settings} #{'text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200' unless is_subscriber_settings}",
+          data: { turbo_frame: "shipping_content", tab: "subscriber_settings" } do %>
         <i class="fa-solid fa-gear mr-2"></i>
         Subscriber Settings
       <% end %>
@@ -131,15 +131,15 @@ function initializeNavigation() {
         return 'rate_tables';
       }
 
-      // Check for Exigo Settings
-      if (contentText.includes('Subscriber Settings') || contentText.includes('Exigo Integration Settings') || contentText.includes('Exigo API')) {
-        return 'exigo_settings';
+      // Check for Subscriber Settings
+      if (contentText.includes('Subscriber Settings')) {
+        return 'subscriber_settings';
       }
     }
 
     // Fallback to URL-based detection
-    if (currentPath.includes('/exigo_setting')) {
-      return 'exigo_settings';
+    if (currentPath.includes('/subscriber_setting')) {
+      return 'subscriber_settings';
     } else if (currentPath.includes('/rates') || currentPath.includes('/rate_tables')) {
       return 'rate_tables';
     } else if (currentPath.includes('/sort_order')) {
