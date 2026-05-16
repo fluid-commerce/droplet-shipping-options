@@ -110,10 +110,11 @@ class RatesController < ApplicationController
         csv_content = file_to_use.read
         file_to_use.rewind
 
-        # Handle encoding: uploaded files may arrive as ASCII-8BIT with a
-        # UTF-8 BOM (common when exported from Excel). Force to UTF-8 and
-        # strip the BOM so downstream CSV parsing works cleanly.
-        csv_content = csv_content.force_encoding("UTF-8")
+        # Handle encoding: uploaded files may arrive as ASCII-8BIT or Windows-1252
+        # (common when exported from Excel). Transcode to UTF-8, replacing any
+        # bytes that are invalid or undefined in the source encoding, then strip
+        # the UTF-8 BOM if present so downstream CSV parsing works cleanly.
+        csv_content = csv_content.encode("UTF-8", "binary", invalid: :replace, undef: :replace)
         csv_content.delete_prefix!("\xEF\xBB\xBF")
 
         # Create a temporary file to store the CSV content
