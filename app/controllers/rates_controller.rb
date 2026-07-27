@@ -110,12 +110,18 @@ class RatesController < ApplicationController
         csv_content = file_to_use.read
         file_to_use.rewind
 
-        # Handle encoding: uploaded files may arrive as ASCII-8BIT or Windows-1252
-        # (common when exported from Excel). Transcode to UTF-8, replacing any
-        # bytes that are invalid or undefined in the source encoding, then strip
-        # the UTF-8 BOM if present so downstream CSV parsing works cleanly.
-        csv_content = csv_content.encode("UTF-8", "binary", invalid: :replace, undef: :replace)
-        csv_content.delete_prefix!("\xEF\xBB\xBF")
+        # Handle encoding: uploaded files arrive as ASCII-8BIT bytes that are
+        # usually UTF-8 (often with a BOM, common when exported from Excel) but
+        # are sometimes Windows-1252/Latin-1 instead. Strip the BOM at the byte
+        # level first, then relabel as UTF-8 and only transcode when the bytes
+        # are not valid UTF-8, so real multi-byte characters survive untouched.
+        # Windows-1252 transcoding replaces the few undefined bytes rather than
+        # raising Encoding::UndefinedConversionError downstream.
+        csv_content = csv_content.dup.force_encoding(Encoding::BINARY).delete_prefix("\xEF\xBB\xBF".b)
+        csv_content.force_encoding(Encoding::UTF_8)
+        unless csv_content.valid_encoding?
+          csv_content = csv_content.encode(Encoding::UTF_8, Encoding::WINDOWS_1252, invalid: :replace, undef: :replace)
+        end
 
         # Create a temporary file to store the CSV content
         temp_file = Tempfile.new([ "csv_import_#{session.id}_", ".csv" ], Rails.root.join("tmp"))
