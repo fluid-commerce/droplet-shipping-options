@@ -62,9 +62,38 @@ class RatesControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
     assert_match(/Successfully imported/, flash[:notice])
 
-    imported_method = Rate.joins(:shipping_option).order(created_at: :desc).first.shipping_option.name
-    assert imported_method.valid_encoding?
-    assert imported_method.start_with?("Expr")
+    # Pin the exact name: 0xC2 is "Â" in Windows-1252, so the byte has to survive as that
+    # character. Asserting only the "Expr" prefix would also pass if the byte were dropped
+    # or turned into a replacement character.
+    assert ShippingOption.exists?(name: "ExprÂess Shipping"),
+      "expected 0xC2 to be transcoded to Â, got #{ShippingOption.pluck(:name).inspect}"
+  end
+
+  test "process_import preserves valid UTF-8 when the upload also carries a corrupt byte" do
+    # The corruption case: a file that is mostly valid UTF-8 but ends on a truncated
+    # sequence. Re-reading the whole file as Windows-1252 because of that one byte turns
+    # "Café" into "CafÃ©", and refusing to transcode at all makes CSV.parse raise. Only
+    # scrubbing the damaged byte while leaving the intact multi-byte characters alone
+    # imports the row under its real name.
+    csv_bytes = CSV_IMPORT_HEADER.b +
+      "Caf\xC3\xA9 Express,US,CA,0,5,9.99,5.00\n".b +
+      "Se\xC3\xB1or Freight,US,NY,0,5,9.99,5.00\n".b +
+      "Ac\xC3me Freight,US,TX,0,5,9.99,5.00\n".b
+    uploaded = uploaded_csv(csv_bytes, "mixed_encoding.csv")
+
+    assert_difference -> { Rate.count }, 3 do
+      post process_import_rate_tables_url, params: { dri: "test-dri", csv_file: uploaded }
+    end
+
+    assert_response :redirect
+    assert ShippingOption.exists?(name: "Café Express"),
+      "expected the UTF-8 name to survive the corrupt byte, got #{ShippingOption.pluck(:name).inspect}"
+    assert ShippingOption.exists?(name: "Señor Freight"),
+      "expected the UTF-8 name to survive the corrupt byte, got #{ShippingOption.pluck(:name).inspect}"
+    assert_not ShippingOption.exists?(name: "CafÃ© Express"),
+      "the file must not be re-read as Windows-1252 because of one damaged byte"
+    assert ShippingOption.exists?(name: "Ac�me Freight"),
+      "expected only the damaged byte to be replaced, got #{ShippingOption.pluck(:name).inspect}"
   end
 
   test "process_import preserves valid UTF-8 multi-byte characters" do
@@ -80,6 +109,19 @@ class RatesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :redirect
     assert ShippingOption.exists?(name: "Café Express"), "expected the UTF-8 name to survive unchanged"
+  end
+
+  test "process_import transcodes a Windows-1252 upload without a BOM" do
+    csv_bytes = CSV_IMPORT_HEADER.b + "Se\xF1or Freight,US,NY,0,5,9.99,5.00\n".b
+    uploaded = uploaded_csv(csv_bytes, "cp1252.csv")
+
+    assert_difference -> { Rate.count }, 1 do
+      post process_import_rate_tables_url, params: { dri: "test-dri", csv_file: uploaded }
+    end
+
+    assert_response :redirect
+    assert ShippingOption.exists?(name: "Señor Freight"),
+      "expected 0xF1 to be transcoded to ñ, got #{ShippingOption.pluck(:name).inspect}"
   end
 
   test "process_import transcodes Windows-1252 content carrying a UTF-8 BOM" do

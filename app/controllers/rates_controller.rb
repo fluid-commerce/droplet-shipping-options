@@ -110,18 +110,12 @@ class RatesController < ApplicationController
         csv_content = file_to_use.read
         file_to_use.rewind
 
-        # Handle encoding: uploaded files arrive as ASCII-8BIT bytes that are
-        # usually UTF-8 (often with a BOM, common when exported from Excel) but
-        # are sometimes Windows-1252/Latin-1 instead. Strip the BOM at the byte
-        # level first, then relabel as UTF-8 and only transcode when the bytes
-        # are not valid UTF-8, so real multi-byte characters survive untouched.
-        # Windows-1252 transcoding replaces the few undefined bytes rather than
-        # raising Encoding::UndefinedConversionError downstream.
-        csv_content = csv_content.dup.force_encoding(Encoding::BINARY).delete_prefix("\xEF\xBB\xBF".b)
-        csv_content.force_encoding(Encoding::UTF_8)
-        unless csv_content.valid_encoding?
-          csv_content = csv_content.encode(Encoding::UTF_8, Encoding::WINDOWS_1252, invalid: :replace, undef: :replace)
-        end
+        # Handle encoding before the bytes are parked in a temp file, so the
+        # auto-correction round trip re-reads content that is already valid
+        # UTF-8. RateCsvImportService normalizes again on read (the same call,
+        # which is a no-op on already-valid content) so that callers reaching
+        # the service directly get the identical treatment.
+        csv_content = CsvEncoding.to_utf8(csv_content)
 
         # Create a temporary file to store the CSV content
         temp_file = Tempfile.new([ "csv_import_#{session.id}_", ".csv" ], Rails.root.join("tmp"))

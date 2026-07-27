@@ -79,9 +79,11 @@ private
 
   def read_csv_file
     content = file.respond_to?(:read) ? file.read : File.read(file.path)
-    # Handle encoding: force to UTF-8 and strip BOM if present
-    content = content.force_encoding("UTF-8")
-    content.delete_prefix!("\xEF\xBB\xBF")
+    # Handle encoding: strip the BOM and turn whatever bytes arrived into valid
+    # UTF-8. Shared with RatesController#process_import so an upload and a direct
+    # service call are transcoded identically; a no-op on valid UTF-8, so content
+    # the controller already normalized passes straight through.
+    content = CsvEncoding.to_utf8(content)
     # Store original content for re-reading when applying corrections
     @csv_content = content
     CSV.parse(content, headers: true, header_converters: :symbol)
