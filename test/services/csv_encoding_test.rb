@@ -87,6 +87,14 @@ class CsvEncodingTest < ActiveSupport::TestCase
     assert_equal once, CsvEncoding.to_utf8(once)
   end
 
+  test "counts the characters that stand in for unrecoverable bytes" do
+    assert_equal 0, CsvEncoding.replacement_count(CsvEncoding.to_utf8("Se\xF1or".b))
+    assert_equal 0, CsvEncoding.replacement_count(CsvEncoding.to_utf8("Caf\xC3\xA9".b))
+    assert_equal 0, CsvEncoding.replacement_count(nil)
+    assert_equal 1, CsvEncoding.replacement_count(CsvEncoding.to_utf8("Caf\xC3\xA9 Express".b + "\xC3".b))
+    assert_equal 5, CsvEncoding.replacement_count(CsvEncoding.to_utf8("A\x81\x8D\x8F\x90\x9DB".b))
+  end
+
   test "handles empty and nil content" do
     assert_equal "", CsvEncoding.to_utf8("")
     assert_nil CsvEncoding.to_utf8(nil)

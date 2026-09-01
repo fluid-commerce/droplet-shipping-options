@@ -770,6 +770,36 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
       "one damaged byte must not re-read the whole file as Windows-1252"
   end
 
+  test "should warn when the upload carried bytes no encoding could recover" do
+    # A lossy import must not be silent: the row still lands, but the operator has
+    # to be able to find out that a stored name no longer matches the file.
+    bytes = CSV_HEADER_BYTES +
+      "Caf\xC3\xA9 Express,US,CA,0,5,9.99,5.00\n".b +
+      "Se\xC3\xB1or Freight,US,NY,0,5,9.99,5.00\n".b +
+      "Ac\xC3me Freight,US,TX,0,5,9.99,5.00\n".b
+    service = RateCsvImportService.new(company: @company, file: create_binary_csv_file(bytes))
+    logged = []
+    Rails.logger.stub(:warn, ->(message) { logged << message }) do
+      assert service.call[:success]
+    end
+
+    assert logged.any? { |message| message.include?("unrecoverable byte(s)") },
+      "expected a warning about the replaced byte, got #{logged.inspect}"
+    assert @company.shipping_options.exists?(name: "Ac\u{FFFD}me Freight")
+  end
+
+  test "should not warn when the upload needed no replacement" do
+    bytes = CSV_HEADER_BYTES + "Se\xF1or Freight,US,NY,0,5,9.99,5.00\n".b
+    service = RateCsvImportService.new(company: @company, file: create_binary_csv_file(bytes))
+    logged = []
+    Rails.logger.stub(:warn, ->(message) { logged << message }) do
+      assert service.call[:success]
+    end
+
+    assert_empty logged.select { |message| message.include?("unrecoverable byte(s)") },
+      "a cleanly transcoded Windows-1252 file must not be reported as lossy"
+  end
+
 private
 
   def create_binary_csv_file(bytes)

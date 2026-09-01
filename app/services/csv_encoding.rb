@@ -68,6 +68,22 @@ module CsvEncoding
     end
   end
 
+  # Public: Counts the characters #to_utf8 could not recover from the original
+  # bytes and stood in for.
+  #
+  # A non-zero count means the import is lossy: those characters are gone from
+  # the content and cannot be recovered from it, so callers should say so rather
+  # than let a mangled shipping method name land in the database unremarked.
+  #
+  # utf8_content - A String returned by #to_utf8. nil counts as zero.
+  #
+  # Returns an Integer.
+  def self.replacement_count(utf8_content)
+    return 0 if utf8_content.nil?
+
+    utf8_content.to_s.count(REPLACEMENT_CHARACTER)
+  end
+
   # Internal: Counts the characters in a valid UTF-8 String that occupy more than
   # one byte.
   #
