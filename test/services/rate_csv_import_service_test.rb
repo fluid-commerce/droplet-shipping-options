@@ -1,6 +1,8 @@
 require "test_helper"
 
 class RateCsvImportServiceTest < ActiveSupport::TestCase
+  CSV_HEADER_BYTES = "shipping_method,country,region,min_range_lbs,max_range_lbs,flat_rate,min_charge\n".b.freeze
+
   def setup
     @company = companies(:acme)
     @shipping_option = shipping_options(:express_shipping)
@@ -712,7 +714,101 @@ class RateCsvImportServiceTest < ActiveSupport::TestCase
     assert_equal 1, result[:imported_count]
   end
 
+  # The controller normalizes an upload before it ever reaches this service, so these
+  # cover the direct-call path: anything constructing the service itself (a job, a
+  # console session, a future caller) has to get the same transcoding.
+  test "should transcode Windows-1252 bytes when called directly" do
+    file = create_binary_csv_file(CSV_HEADER_BYTES + "Se\xF1or Freight,US,NY,0,5,9.99,5.00\n".b)
+    service = RateCsvImportService.new(company: @company, file: file)
+
+    result = service.call
+
+    assert result[:success], "Expected success but got: #{result[:message]} #{result[:errors]}"
+    assert_equal 1, result[:imported_count]
+    assert @company.shipping_options.exists?(name: "Señor Freight"),
+      "expected 0xF1 to be transcoded to ñ, got #{@company.shipping_options.pluck(:name).inspect}"
+  end
+
+  test "should transcode Windows-1252 bytes carrying a UTF-8 BOM when called directly" do
+    bytes = "\xEF\xBB\xBF".b + CSV_HEADER_BYTES + "Se\xF1or Freight,US,NY,0,5,9.99,5.00\n".b
+    file = create_binary_csv_file(bytes)
+    service = RateCsvImportService.new(company: @company, file: file)
+
+    result = service.call
+
+    assert result[:success], "Expected success but got: #{result[:message]} #{result[:errors]}"
+    assert @company.shipping_options.exists?(name: "Señor Freight"),
+      "expected the BOM to be stripped and 0xF1 transcoded, got #{@company.shipping_options.pluck(:name).inspect}"
+  end
+
+  test "should import bytes that are not valid UTF-8 when called directly" do
+    file = create_binary_csv_file(CSV_HEADER_BYTES + "Expr\xC2ess Shipping,US,CA,0,5,9.99,5.00\n".b)
+    service = RateCsvImportService.new(company: @company, file: file)
+
+    result = service.call
+
+    assert result[:success], "Expected success but got: #{result[:message]} #{result[:errors]}"
+    assert @company.shipping_options.exists?(name: "ExprÂess Shipping"),
+      "expected 0xC2 to be transcoded to Â, got #{@company.shipping_options.pluck(:name).inspect}"
+  end
+
+  test "should keep intact UTF-8 characters when the file also holds a corrupt byte" do
+    bytes = CSV_HEADER_BYTES +
+      "Caf\xC3\xA9 Express,US,CA,0,5,9.99,5.00\n".b +
+      "Se\xC3\xB1or Freight,US,NY,0,5,9.99,5.00\n".b +
+      "Ac\xC3me Freight,US,TX,0,5,9.99,5.00\n".b
+    file = create_binary_csv_file(bytes)
+    service = RateCsvImportService.new(company: @company, file: file)
+
+    result = service.call
+
+    assert result[:success], "Expected success but got: #{result[:message]} #{result[:errors]}"
+    assert_equal 3, result[:imported_count]
+    assert @company.shipping_options.exists?(name: "Café Express"),
+      "expected the UTF-8 name to survive, got #{@company.shipping_options.pluck(:name).inspect}"
+    assert_not @company.shipping_options.exists?(name: "CafÃ© Express"),
+      "one damaged byte must not re-read the whole file as Windows-1252"
+  end
+
+  test "should warn when the upload carried bytes no encoding could recover" do
+    # A lossy import must not be silent: the row still lands, but the operator has
+    # to be able to find out that a stored name no longer matches the file.
+    bytes = CSV_HEADER_BYTES +
+      "Caf\xC3\xA9 Express,US,CA,0,5,9.99,5.00\n".b +
+      "Se\xC3\xB1or Freight,US,NY,0,5,9.99,5.00\n".b +
+      "Ac\xC3me Freight,US,TX,0,5,9.99,5.00\n".b
+    service = RateCsvImportService.new(company: @company, file: create_binary_csv_file(bytes))
+    logged = []
+    Rails.logger.stub(:warn, ->(message) { logged << message }) do
+      assert service.call[:success]
+    end
+
+    assert logged.any? { |message| message.include?("unrecoverable byte(s)") },
+      "expected a warning about the replaced byte, got #{logged.inspect}"
+    assert @company.shipping_options.exists?(name: "Ac\u{FFFD}me Freight")
+  end
+
+  test "should not warn when the upload needed no replacement" do
+    bytes = CSV_HEADER_BYTES + "Se\xF1or Freight,US,NY,0,5,9.99,5.00\n".b
+    service = RateCsvImportService.new(company: @company, file: create_binary_csv_file(bytes))
+    logged = []
+    Rails.logger.stub(:warn, ->(message) { logged << message }) do
+      assert service.call[:success]
+    end
+
+    assert_empty logged.select { |message| message.include?("unrecoverable byte(s)") },
+      "a cleanly transcoded Windows-1252 file must not be reported as lossy"
+  end
+
 private
+
+  def create_binary_csv_file(bytes)
+    file = Tempfile.new([ "test_encoding", ".csv" ])
+    file.binmode
+    file.write(bytes)
+    file.rewind
+    Rack::Test::UploadedFile.new(file.path, "text/csv", original_filename: "encoding_test.csv")
+  end
 
   def create_csv_file(content)
     file = Tempfile.new([ "test", ".csv" ])

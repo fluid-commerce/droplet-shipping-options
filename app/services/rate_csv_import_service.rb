@@ -79,9 +79,12 @@ private
 
   def read_csv_file
     content = file.respond_to?(:read) ? file.read : File.read(file.path)
-    # Handle encoding: force to UTF-8 and strip BOM if present
-    content = content.force_encoding("UTF-8")
-    content.delete_prefix!("\xEF\xBB\xBF")
+    # Handle encoding: strip the BOM and turn whatever bytes arrived into valid
+    # UTF-8. Shared with RatesController#process_import so an upload and a direct
+    # service call are transcoded identically; a no-op on valid UTF-8, so content
+    # the controller already normalized passes straight through.
+    content = CsvEncoding.to_utf8(content)
+    log_unrecoverable_bytes(content)
     # Store original content for re-reading when applying corrections
     @csv_content = content
     CSV.parse(content, headers: true, header_converters: :symbol)
@@ -91,6 +94,25 @@ private
   rescue StandardError => e
     @errors << "Error reading CSV file: #{e.message}"
     nil
+  end
+
+  # Internal: Records that the upload carried bytes no encoding could recover, so
+  # a lossy import is visible in the logs instead of landing silently. The rows
+  # still import: the damaged bytes only ever sit in text columns, and refusing
+  # the whole file over one bad byte is what this fix exists to stop.
+  #
+  # content - The normalized UTF-8 String about to be parsed.
+  #
+  # Returns nothing.
+  def log_unrecoverable_bytes(content)
+    count = CsvEncoding.replacement_count(content)
+    return if count.zero?
+
+    Rails.logger.warn(
+      "[CSV Import] #{count} unrecoverable byte(s) in the uploaded CSV were " \
+      "replaced with the Unicode replacement character; affected text values " \
+      "will not match the original file."
+    )
   end
 
   def validate_headers(csv_data)
