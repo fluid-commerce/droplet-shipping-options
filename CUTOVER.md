@@ -358,3 +358,26 @@ also commented at its call site.
   on a blocking or async checkout path where a non-2xx is a broken cart rather
   than a protected one. The `[fluid-callback:<name>] rejected` log line is the
   signal to alert on.
+- **The coordinate-with-the-shop fallback sends the STRING `"0"`** as its
+  delivery estimate, where Rails sent the integer `0`.
+  `update_cart_shipping.yml` types that field `string`, and fluid validates
+  every response against the schema in `Callback::Client#classify_response` —
+  the integer classified as `:schema_invalid`, which raised a Sentry report and
+  a Slack notification for every cart that fell back. It is not dropped today,
+  but the classification is one change away from being enforcement. `"0"`
+  renders as the same character, so nothing a shopper sees changes.
+  `src/lib/shipping/response-schema.test.ts` validates every body these routes
+  can emit against all four published schemas.
+- **Weight is rounded the way Ruby rounds, deliberately reproduced.**
+  `Math.round(x * 100) / 100` is not `Float#round(2)` — they differ on binary
+  half-way values such as 1.005, 0.145 and 1.015 — and the rounded weight picks
+  the rate band, so the naive form would have priced some carts from a
+  different band than Rails. numeric.c's `round_half_up` is ported directly in
+  `src/lib/shipping/weight.ts`.
+- **A whitespace-only `rates.region` prices as country-level**, matching Rails'
+  `blank?`. Nothing in the database or the model stops a rate being saved that
+  way.
+- **Rates are ordered by id in the query.** Rails' `includes(:rates)` had no
+  ORDER BY, and the overlap validation permits adjacent bands (0–5 and 5–10)
+  whose ends both match at exactly 5 lb, so the winner was whatever the plan
+  returned first. Adding the country predicate can change that plan.
