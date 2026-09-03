@@ -42,9 +42,14 @@ node_modules
 # https://vitejs.dev/guide/env-and-mode.html#env-files
 *.local
 
-# ignore yarn artifacts
-.yarn/install-state.gz
-
 # ignore environment files
 .env
 .env.local
+
+# Next.js (the Next app's project directory is src/ — see src/next.config.ts)
+/src/.next
+/.next
+/next-env.d.ts
+/src/next-env.d.ts
+*.tsbuildinfo
+/.turbo

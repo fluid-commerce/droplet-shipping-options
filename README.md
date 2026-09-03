@@ -1,8 +1,104 @@
 ## README
 
-Droplets are integrations between third-party services and Fluid. This is a repository intended to be used as an example for creating Droplets.
+> ### ⚠️ This repository currently contains two apps
+>
+> A **Next.js** app is being migrated in alongside the existing **Rails 8** app.
+> Both run against the same PostgreSQL database. The Rails app is still the one
+> deployed and the one every installation points at; the Next app takes no
+> traffic until an installation's registrations are repointed at it.
+>
+> **Only the Fluid-facing half is ported.** The Next app answers the four
+> callbacks and the webhook. The merchant UI an operator opens from inside Fluid
+> — shipping methods, the rate tables and their CSV importer, the React rate
+> editor, the subscriber toggle — is still Rails only, so **Rails is not being
+> retired by this work**. See [`CUTOVER.md`](CUTOVER.md) step 5.
+>
+> See [Next.js app](#nextjs-app) below and [`CUTOVER.md`](CUTOVER.md).
+
+Droplets are integrations between third-party services and Fluid. This one
+prices shipping: it answers Fluid's `update_cart_shipping` callback with the
+options a company has configured for the cart's destination, priced from its own
+`shipping_options` / `rates` tables by weight band and region.
+
+Three further callbacks exist only to support one feature —
+free shipping for subscribers. `cart_customer_logged_in` asks Fluid whether the
+shopper holds a `yoli_plus` subscription and records the answer against the cart;
+`update_cart_email` and `verify_email_success` throw that record away when the
+cart's email moves to someone else. The calculation callback only ever reads it,
+because it runs on the blocking checkout path.
 
 Documentation can be found in the [project's GitHub page](https://fluid-commerce.github.io/droplet-template/)
+
+## Next.js app
+
+The Next.js port of this droplet. Same database, same Fluid integration points,
+plus callback signature verification via `@fluid-app/droplet-sdk`.
+
+### Layout
+
+| Path | What |
+|---|---|
+| `src/` | The Next app — **and its project directory**. `next.config.ts`, `tsconfig.json` and `next-env.d.ts` live here, not at the repo root. |
+| `src/app/api/callbacks/` | The four callback routes, one directory per Fluid definition name in kebab-case |
+| `src/lib/shipping/` | The port of `ShippingCalculationService`, `CartSessionService` and `MetafieldSubscriptionService` |
+| `src/lib/` | Fluid client, settings, callbacks, handlers, events, permissions |
+| `src/instrumentation.ts` | Boot-time probe: reports whether any callback registration tokens are stored |
+| `prisma/schema.prisma` | The **existing Rails tables**, mapped with `@@map`/`@map` |
+| `db/migrate/` | Rails owns the schema, including `fluid_callback_registrations` — the Next app runs no migration step |
+| `scripts/` | `cutover.ts`, `smoke-next.sh`, `backfill-callback-tokens.ts`, `create-admin.ts`, `create-default-settings.ts` |
+| `vendor/droplet-sdk/` | Temporary vendored copy of the SDK — see below |
+| `Dockerfile.next` | Production image (the Rails `docker/Dockerfile` still builds the Rails service) |
+| `.github/workflows/ci-next.yml` | Lint / typecheck / test / build / docker |
+
+**The two apps serve different paths.** Rails answers `POST /webhook` and
+`POST /callbacks/<local_name>`; Next answers `POST /api/webhooks` and
+`POST /api/callbacks/<kebab-definition-name>`. The full mapping, including the
+one definition whose Rails route name is not its Fluid definition name, is in
+[`CUTOVER.md`](CUTOVER.md).
+
+**Why `next.config.ts` is inside `src/`.** Next resolves its app directory with
+`findDir(root, "app")`, which prefers `<root>/app` over `<root>/src/app` and
+cannot be overridden. This repo still contains Rails' `app/`, so building from
+the repo root makes Next scan Rails' directory and emit an empty app. Next is
+therefore pointed at `src` as its project directory — `next build src`. When
+Rails is removed, those three config files move up one level and the commands
+drop the `src` argument. No source file moves and no import path changes.
+
+### Commands
+
+```bash
+pnpm install
+pnpm db:generate          # prisma generate
+pnpm dev                  # next dev src
+pnpm build                # prisma generate && next build src
+pnpm test                 # vitest
+pnpm lint
+pnpm typecheck
+
+pnpm setup:create-admin   # ADMIN_EMAIL / ADMIN_PASSWORD
+pnpm settings:defaults    # create the default `settings` rows
+pnpm backfill:callbacks   # copy callback verification tokens out of Fluid
+pnpm cutover status <shop>
+```
+
+The Rails frontend's Vite build is still here under `pnpm build:vite` and
+`pnpm test:jest`. The repo's JS toolchain moved from yarn to pnpm when the Next
+app took over the root `package.json`; `ci.yml`, `docker/Dockerfile*`, `makefile`,
+`Procfile.dev` and `bin/setup` were updated to match, and nothing under `app/`,
+`config/`, `db/` (other than the one additive migration) or `Gemfile` changed.
+
+### The SDK is vendored, temporarily
+
+`@fluid-app/droplet-sdk` is **not published yet**, so the SDK source is vendored
+at `vendor/droplet-sdk` and depended on as
+`"@fluid-app/droplet-sdk": "link:./vendor/droplet-sdk"`. `pnpm install`,
+`pnpm build` and `pnpm test` therefore work on a clean clone with no registry
+authentication.
+
+Import specifiers are already the published name, so switching to the registry
+copy is one line in `package.json` and nothing else. The directory is a
+**verbatim copy** — refresh it by replacing it wholesale from the droplet
+template, never by editing it in place, or the fleet's copies diverge.
 
 ## Production environment
 
@@ -73,7 +169,8 @@ The Sentry integration will only be active when the `SENTRY_DSN` environment var
 ![Ruby](https://img.shields.io/badge/Ruby-3.4.2-CC342D?logo=ruby&logoColor=white)
 ![Rails](https://img.shields.io/badge/Rails-8.0.2-CC0000?logo=ruby-on-rails&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-23.8.0-339933?logo=node.js&logoColor=white)
-![Yarn](https://img.shields.io/badge/Yarn-4.7.0-2C8EBB?logo=yarn&logoColor=white)
+![pnpm](https://img.shields.io/badge/pnpm-10.17.1-F69220?logo=pnpm&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-15.5.7-000000?logo=next.js&logoColor=white)
 ![Font Awesome](https://img.shields.io/badge/Font_Awesome-6.7.2-528DD7?logo=fontawesome&logoColor=white)
 ![Tailwind CSS 4.0](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?logo=tailwindcss&logoColor=white)
 <br>
@@ -82,7 +179,7 @@ The Sentry integration will only be active when the `SENTRY_DSN` environment var
 
 ### Running locally
 
-Install dependencies with `bundle install` and `yarn install`
+Install dependencies with `bundle install` and `pnpm install`
 and install foreman with `gem install foreman`  
 Just the rails server (port 3000)<br>
 `foreman start -f Procfile.dev`

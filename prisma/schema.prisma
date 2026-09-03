@@ -1,0 +1,354 @@
+// fluid-droplet-shipping-options — Prisma schema
+//
+// This schema describes the SAME PostgreSQL database the Rails app owns
+// (db/schema.rb, version 2026_03_16_000000). Every model is mapped back to the
+// Rails table and column names with @@map / @map so that pointing this app at
+// an existing production database changes nothing about it.
+//
+// Consequences of that, which are deliberate and should not be "tidied":
+//
+//   * Primary keys are `BigInt`, because Rails 8 creates `bigserial` ids.
+//     They surface in TypeScript as `bigint`; convert with `String(id)` before
+//     handing one to a client component or to JSON.
+//   * `events.status` is a plain integer, because ActiveRecord's `enum` stores
+//     an integer. See EVENT_STATUS in src/lib/types.
+//   * `users.permission_sets` is a Postgres text[], because Rails declared
+//     `t.string array: true`.
+//   * Nullability and indexes mirror db/schema.rb exactly. In particular
+//     `companies.fluid_company_id` and `companies.company_droplet_uuid` are
+//     NOT unique, so they are looked up with findFirst, never findUnique.
+//
+//   * `rates` money/weight columns are `numeric`, so they surface as
+//     `Decimal`. Convert with `.toNumber()` before arithmetic; never `Number()`
+//     a Decimal implicitly.
+//
+// FluidCallbackRegistration is in db/schema.rb too, added by
+// db/migrate/20260317000000_create_fluid_callback_registrations.rb. It is owned
+// by @fluid-app/droplet-sdk and is additive — the Rails app neither reads nor
+// writes it, so both apps can run against this database at once. The Rails
+// migration exists because Prisma must never own DDL here: modelling the table
+// in Prisma alone would leave it absent in production, the store would throw,
+// the SDK would read that as an auth failure, and every callback would be
+// silently refused behind a 200.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Rails: `companies`. One row per Fluid company that installed this droplet.
+model Company {
+  id BigInt @id @default(autoincrement())
+
+  fluidShop                String    @map("fluid_shop")
+  authenticationToken      String    @unique @map("authentication_token")
+  name                     String
+  settings                 Json?     @default("{}")
+  webhookVerificationToken String?   @map("webhook_verification_token")
+  fluidCompanyId           BigInt    @map("fluid_company_id")
+  serviceCompanyId         String?   @map("service_company_id")
+  companyDropletUuid       String?   @map("company_droplet_uuid")
+  // Nullable: Rails permits NULL here (db/schema.rb), and Prisma throws
+  // `Inconsistent column data` when it reads a NULL into a required
+  // Boolean — so a single legacy row would break every company read.
+  active                   Boolean?  @default(false)
+  uninstalledAt            DateTime? @map("uninstalled_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  dropletInstallationUuid String? @map("droplet_installation_uuid")
+
+  /// Fluid `cbr_` uuids of the callback registrations created for this company
+  /// at install time. Rails stored this as jsonb defaulting to [].
+  installedCallbackIds Json? @default("[]") @map("installed_callback_ids")
+
+  /// Installation uuids this company previously held, most recent first, capped
+  /// at 5 by DropletInstallationService. Used to tell "you reinstalled, reopen
+  /// the droplet" apart from "this installation does not exist". Rails declares
+  /// it NOT NULL with a `[]` default, so it is non-optional here.
+  previousDris Json @default("[]") @map("previous_dris")
+
+  events              Event[]
+  integrationSettings IntegrationSetting[]
+  shippingOptions     ShippingOption[]
+  priceTypes          PriceType[]
+
+  @@index([active])
+  @@index([companyDropletUuid])
+  @@index([fluidCompanyId])
+  @@index([fluidShop])
+  @@index([previousDris], type: Gin)
+  @@map("companies")
+}
+
+/// Rails: `callbacks`. The droplet's local catalogue of Fluid callback
+/// definitions, synced from GET /api/callback/definitions. A row is only
+/// registered with Fluid on install when it is `active` and has a url+timeout.
+model Callback {
+  id BigInt @id @default(autoincrement())
+
+  name             String?
+  description      String?
+  url              String?
+  timeoutInSeconds Int?     @map("timeout_in_seconds")
+  active           Boolean?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("callbacks")
+}
+
+/// Rails: `events`. Audit trail of webhook events, scoped to a company.
+///
+/// NOTE: nothing in the Rails app reads or writes this table — `Event` is a
+/// model with validations and no call sites. It is mapped here so a droplet
+/// forked from this template can start using it without a migration, and so
+/// that `companies` keeps the foreign key that stops a company row being
+/// deleted out from under existing rows.
+model Event {
+  id BigInt @id @default(autoincrement())
+
+  identifier String?
+  name       String?
+  payload    Json?     @default("{}")
+  timestamp  DateTime?
+  /// ActiveRecord enum: 0 pending, 1 processed, 2 failed.
+  status     Int?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  companyId BigInt  @map("company_id")
+  company   Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([identifier])
+  @@index([name])
+  @@map("events")
+}
+
+/// Rails: `integration_settings`. Per-company credentials/settings for whatever
+/// third-party service a droplet forked from this template talks to.
+///
+/// Also unused by the Rails app — model only, no call sites. Mapped for the
+/// same reason as `events`.
+model IntegrationSetting {
+  id BigInt @id @default(autoincrement())
+
+  companyId   BigInt  @map("company_id")
+  // Nullable for the same reason as companies.active.
+  enabled     Boolean? @default(false)
+  settings    Json?   @default("{}")
+  credentials Json?   @default("{}")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  // Non-unique, matching Rails. db/schema.rb declares
+  // `t.index ["company_id"], name: "index_integration_settings_on_company_id"`
+  // with no `unique: true`. Declaring @unique here would make `prisma db push`
+  // try to add a constraint to a live table — failing outright if any company
+  // has more than one row, and silently tightening the schema if not. Neither
+  // is something a migration PR should do on its way past.
+  @@index([companyId])
+
+  @@map("integration_settings")
+}
+
+/// Rails: `settings`. Droplet-wide configuration, each row a JSON Schema plus
+/// the values validated against it. See src/lib/settings.
+model Setting {
+  id BigInt @id @default(autoincrement())
+
+  name        String  @unique
+  description String?
+  values      Json?   @default("{}")
+  schema      Json
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+/// Rails: `users`, created by Devise. `encrypted_password` is a bcrypt digest
+/// and Auth.js verifies it directly, so existing rows keep working unchanged.
+model User {
+  id BigInt @id @default(autoincrement())
+
+  email             String @unique @default("")
+  encryptedPassword String @default("") @map("encrypted_password")
+
+  resetPasswordToken  String?   @unique @map("reset_password_token")
+  resetPasswordSentAt DateTime? @map("reset_password_sent_at")
+  rememberCreatedAt   DateTime? @map("remember_created_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  /// Rails `t.string array: true` — a Postgres text[].
+  permissionSets String[] @default([]) @map("permission_sets")
+
+  @@map("users")
+}
+
+/// Rails: `webhooks`. A catalogue row per webhook subscription this droplet
+/// knows about.
+///
+/// Unused by the Rails app as well — the webhooks that actually exist are
+/// declared in src/lib/config/droplet.config.ts, and the two droplet-level ones
+/// have their Fluid ids stored in the `fluid_webhook` settings row. Mapped so
+/// the table is accounted for.
+model Webhook {
+  id BigInt @id @default(autoincrement())
+
+  resource String?
+  event    String?
+  active   Boolean? @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("webhooks")
+}
+
+/// Rails: `shipping_options`. One shipping method a company offers, scoped to a
+/// set of ISO country codes and ordered per country.
+///
+/// Almost every column is nullable because Rails enforces presence in the model
+/// rather than the database (`validates :name, presence: true` and friends), and
+/// db/schema.rb declares no NOT NULL. Prisma throws `Inconsistent column data`
+/// on a NULL read into a required field, so a single legacy row with a missing
+/// status would break every shipping calculation.
+model ShippingOption {
+  id BigInt @id @default(autoincrement())
+
+  name         String?
+  deliveryTime Int?     @map("delivery_time")
+  startingRate Decimal? @map("starting_rate") @db.Decimal
+  /// jsonb array of ISO-3166-1 alpha-2 codes, e.g. ["US","CA"].
+  countries    Json?
+  /// "active" | "inactive" | "draft" — a plain string in Rails, not an enum.
+  status       String?
+
+  companyId BigInt  @map("company_id")
+  company   Company @relation(fields: [companyId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  /// jsonb object of country code -> integer sort position, e.g. {"US": 1}.
+  /// Options with no entry for a country sort last.
+  countrySortPositions Json? @default("{}") @map("country_sort_positions")
+
+  rates Rate[]
+
+  @@index([companyId])
+  @@index([countrySortPositions], type: Gin)
+  @@map("shipping_options")
+}
+
+/// Rails: `rates`. A weight band and price for one shipping option in one
+/// country, optionally narrowed to a region (state/province).
+///
+/// `region` NULL means the rate applies to the whole country; a region-specific
+/// rate wins over a country-level one. See src/lib/shipping/calculate.ts.
+model Rate {
+  id BigInt @id @default(autoincrement())
+
+  shippingOptionId BigInt         @map("shipping_option_id")
+  shippingOption   ShippingOption @relation(fields: [shippingOptionId], references: [id])
+
+  country String
+  region  String?
+
+  minRangeLbs Decimal @map("min_range_lbs") @db.Decimal(8, 4)
+  maxRangeLbs Decimal @map("max_range_lbs") @db.Decimal(8, 4)
+  flatRate    Decimal @map("flat_rate") @db.Decimal(10, 2)
+  minCharge   Decimal @map("min_charge") @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([country, region])
+  @@index([shippingOptionId, country, region])
+  @@index([shippingOptionId])
+  @@map("rates")
+}
+
+/// Rails: `cart_sessions`. Remembers, per Fluid cart, which email logged in and
+/// whether that customer holds an active subscription.
+///
+/// Written only by the `cart_customer_logged_in` callback and cleared by the
+/// email-change callbacks. `update_cart_shipping` only ever reads it — it must
+/// not check subscription status itself, because that call is on the blocking
+/// checkout path.
+///
+/// Every column except the timestamps is nullable, and `cart_id` carries a
+/// PLAIN index rather than a unique one (db/schema.rb) even though the Rails
+/// model validates uniqueness. So lookups are `findFirst`, never `findUnique`.
+model CartSession {
+  id BigInt @id @default(autoincrement())
+
+  cartId                Int?     @map("cart_id")
+  email                 String?
+  hasActiveSubscription Boolean? @map("has_active_subscription")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([cartId])
+  @@map("cart_sessions")
+}
+
+/// Rails: `price_types`. Per-company price type names.
+///
+/// The table exists in db/schema.rb but has no ActiveRecord model and no call
+/// sites in the Rails app. Mapped so the table is accounted for and so
+/// `companies` keeps the foreign key.
+model PriceType {
+  id BigInt @id @default(autoincrement())
+
+  companyId BigInt  @map("company_id")
+  company   Company @relation(fields: [companyId], references: [id])
+
+  name String
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("price_types")
+}
+
+// ---------------------------------------------------------------------------
+// Owned by @fluid-app/droplet-sdk. Copied verbatim from
+// vendor/droplet-sdk/schema/callback-registrations.prisma — keep it identical
+// across the fleet so the shape survives the eventual Prisma -> Drizzle move.
+//
+// Only the digest is stored: Fluid presents the plaintext token on every
+// request, so a digest is enough to locate the registration, and a database
+// dump then yields no working callback credentials.
+// ---------------------------------------------------------------------------
+model FluidCallbackRegistration {
+  uuid           String @id
+  dri            String
+  definitionName String @map("definition_name")
+  tokenDigest    String @unique @map("token_digest")
+  url            String
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([dri])
+  @@map("fluid_callback_registrations")
+}
