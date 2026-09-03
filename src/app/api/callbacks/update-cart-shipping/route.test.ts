@@ -119,7 +119,9 @@ describe("POST /api/callbacks/update-cart-shipping", () => {
     // The fixture rate is country "US"; the payload said "us".
     expect(mockPrisma.shippingOption.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        include: { rates: { where: { country: "US" } } },
+        include: {
+          rates: { where: { country: "US" }, orderBy: { id: "asc" } },
+        },
       }),
     );
   });

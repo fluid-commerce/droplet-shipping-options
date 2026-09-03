@@ -118,18 +118,23 @@ function findBestRate(
     weightLbs >= rate.minRangeLbs.toNumber() &&
     weightLbs <= rate.maxRangeLbs.toNumber();
 
+  // TRIMMED, because Rails asked `state_code.present?` / `.blank?`, and
+  // ActiveSupport treats a whitespace-only string as blank. Nothing stops a
+  // rate being saved with `region = " "` — the column has no constraint and the
+  // model no validation — and Rails prices such a row as country-level. A plain
+  // truthiness test would make it neither country-level nor a match for any
+  // state, so the rate would simply vanish and the option lose its price.
+  const regionOf = (rate: RateRow) => rate.region?.trim() || null;
+
   const regional = option.rates.find(
     (rate) =>
-      rate.country === country &&
-      !!rate.region &&
-      rate.region === state &&
-      inBand(rate),
+      rate.country === country && regionOf(rate) === state && inBand(rate),
   );
   if (regional) return regional;
 
   return (
     option.rates.find(
-      (rate) => rate.country === country && !rate.region && inBand(rate),
+      (rate) => rate.country === country && !regionOf(rate) && inBand(rate),
     ) ?? null
   );
 }
@@ -159,7 +164,21 @@ function coordinateWithShop(): ShippingOptionResult {
   return {
     shipping_total: 0,
     shipping_title: "Coordinate with the shop",
-    shipping_delivery_time_estimate: 0,
+    // The STRING "0", where Rails sent the integer 0.
+    //
+    // update_cart_shipping.yml types this field `string`, and fluid validates
+    // every callback response against that schema in
+    // `Callback::Client#classify_response`. The integer made this body
+    // `:schema_invalid`, which is not dropped — the shipping strategy still
+    // reads it — but does raise a Sentry report and a Slack notification for
+    // every cart that falls back, and would be dropped outright if that
+    // classification ever became enforcement.
+    //
+    // "0" renders as the same character the integer did, so nothing a shopper
+    // sees changes. What this estimate should actually SAY for a
+    // coordinate-with-the-shop option is a product question, not one to settle
+    // inside a port.
+    shipping_delivery_time_estimate: "0",
   };
 }
 
@@ -205,7 +224,12 @@ export async function calculateShipping(
     where: { companyId: company.id, status: "active" },
     // Only this country's rates. Rails loaded every rate of every matching
     // option; `find_best_rate` then discarded all the other countries' rows.
-    include: { rates: { where: { country: shipToCountry } } },
+    // Ordered explicitly. Rails' `includes(:rates)` had no ORDER BY either, so
+    // which of two overlapping bands won was whatever the plan returned first —
+    // and the Rails overlap validation permits adjacent bands (0–5 and 5–10)
+    // whose ends both match at exactly 5 lb. Adding the country predicate here
+    // can change that plan, so the tie is settled by id instead of by luck.
+    include: { rates: { where: { country: shipToCountry }, orderBy: { id: "asc" } } },
     orderBy: { id: "asc" },
   })) as OptionRow[];
 

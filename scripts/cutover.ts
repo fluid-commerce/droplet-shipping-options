@@ -117,41 +117,6 @@ type Registration = {
   verification_token?: string;
 };
 
-/**
- * Target origin + the path this registration should serve.
- *
- * Only the PATH of the configured url is used. These rows hold ABSOLUTE urls,
- * and `new URL(absolute, base)` ignores the base entirely — so building the
- * destination as `new URL(callback.url, targetUrl)` returned the url it already
- * had. The tool updated each registration to its own current value, adopted its
- * token, printed "moved", and exited zero having moved nothing.
- */
-function destinationFor(configuredUrl: string, targetOrigin: string): string {
-  let path: string;
-  try {
-    const parsed = new URL(configuredUrl);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      fail(`Refusing to build a destination from ${configuredUrl}: not http(s).`);
-    }
-    path = `${parsed.pathname}${parsed.search}`;
-  } catch {
-    // A PROTOCOL-RELATIVE value ("//host/path") is not a path. `new URL` throws
-    // on it as an absolute url, and resolving it against the target yields
-    // https://host/path — the target origin silently replaced by whatever host
-    // the stored row names. Refuse rather than normalise: a row in that shape
-    // is not something to interpret.
-    if (configuredUrl.startsWith("//")) {
-      fail(
-        `Refusing to build a destination from ${configuredUrl}: a ` +
-          `protocol-relative url would resolve to a different host than ` +
-          `${targetOrigin}.`,
-      );
-    }
-    path = configuredUrl.startsWith("/") ? configuredUrl : `/${configuredUrl}`;
-  }
-  return new URL(path, targetOrigin).toString();
-}
-
 type FluidWebhook = {
   id: number | string;
   resource: string;
@@ -547,25 +512,32 @@ async function repoint(
     // callback Fluid rescues into a neutral response, the symptom is not an
     // error but a silently missing result at checkout.
     //
-    // So the destination path is stated when the two apps differ. This is a
-    // single override for every definition; with more than one callback on
-    // different paths, repoint them in separate runs.
+    // So the destination path comes from CALLBACK_PATHS, per definition.
+    // `--callback-path` remains as a single manual override for repairing one
+    // definition by hand.
     const destination = callbackPath
       ? new URL(callbackPath, targetUrl).toString()
       : new URL(pathFor(callback.name, direction), targetUrl).toString();
-    // Recognition accepts EITHER app's path for this definition, on either
-    // origin, plus whatever the operator typed into the `callbacks` row. A
-    // first cutover holds no digest for the Rails registration, so the url is
-    // the only thing that identifies it as ours.
+
+    // Recognition accepts either app's path for this definition, on either
+    // origin, and NOTHING ELSE. A first cutover holds no digest for the Rails
+    // registration, so the url is the only thing identifying it as ours.
+    //
+    // The operator-typed `callbacks.url` is deliberately NOT part of this.
+    // It is a global row anyone with admin access can edit, and if it has
+    // drifted onto a sibling droplet's path — same host, different droplet —
+    // then a same-definition registration at that exact url would be
+    // "recognised" as ours, adopted, and repointed. That is an outage for the
+    // sibling droplet caused by a typo in a text field. CALLBACK_PATHS is
+    // checked into this repo and changes only by review.
     const origins = [targetUrl, ...(fromUrl ? [fromUrl] : [])];
     const expected = [
       destination,
-      ...origins.flatMap((origin) => [
-        destinationFor(callback.url, origin),
-        ...allPathsFor(callback.name).map((path) =>
+      ...origins.flatMap((origin) =>
+        allPathsFor(callback.name).map((path) =>
           new URL(path, origin).toString(),
         ),
-      ]),
+      ),
     ];
     const candidates = live.filter((r) => r.definition_name === callback.name);
     const current = ourRegistration(candidates, heldUuids, expected);
@@ -588,6 +560,63 @@ async function repoint(
       current,
       action: settled ? "noop" : current ? "update" : "create",
     });
+  }
+
+  // ---- COMPLETENESS -------------------------------------------------------
+  //
+  // The plan above is derived from the `callbacks` TABLE. That is not the same
+  // set as this company's live registrations, and assuming it was is how a
+  // company gets left split.
+  //
+  // Two ways they diverge, both real here:
+  //
+  //  * Rails registered `update_cart_shipping` UNCONDITIONALLY —
+  //    DropletInstalledJob#register_active_callbacks hardcodes it — so a
+  //    company can hold a live shipping registration while the table row is
+  //    inactive or absent. That is the definition whose loss means a checkout
+  //    with no shipping at all.
+  //  * A registration survives its table row being deactivated or deleted.
+  //    Nothing in Fluid or in this droplet removes it.
+  //
+  // Without this check, `repoint` moves whatever subset the table describes,
+  // prints Done, exits zero, and leaves the rest answering from the other app.
+  //
+  // So: anything live that is recognisably OURS and is not in the plan stops
+  // the run before a single mutation.
+  const plannedDefinitions = new Set(plans.map((p) => p.name));
+  const movingBetween = [targetUrl, ...(fromUrl ? [fromUrl] : [])];
+  const unplanned = live.filter((registration) => {
+    if (plannedDefinitions.has(registration.definition_name)) return false;
+
+    // Ours by a digest we already hold...
+    if (heldUuids.has(registration.uuid)) return true;
+
+    // ...or ours by sitting at a path this droplet serves, on an origin this
+    // run is moving between. Same exact-match rule as recognition above, so a
+    // sibling droplet's registration is not claimed here either.
+    const paths = allPathsFor(registration.definition_name);
+    if (paths.length === 0) return false;
+    const ourUrls = movingBetween.flatMap((origin) =>
+      paths.map((path) => new URL(path, origin).toString()),
+    );
+    return ourUrls.includes(registration.url);
+  });
+
+  if (unplanned.length > 0) {
+    fail(
+      `  FAIL  ${unplanned.length} live registration(s) belong to this droplet but are ` +
+        `NOT in the plan, because no active row in the \`callbacks\` table names them:\n` +
+        unplanned
+          .map(
+            (r) => `    ${r.definition_name.padEnd(24)} ${r.url}  (${r.uuid})`,
+          )
+          .join("\n") +
+        `\n\n  NOTHING has been changed. Moving only the rest would leave this company ` +
+        `answering\n  from both apps inside one checkout. Fix the \`callbacks\` table ` +
+        `first — on the admin\n  Callbacks screen, make each of these active with a url ` +
+        `and a timeout — then re-run.\n  \`pnpm cutover status ${handle}\` prints the ` +
+        `table rows alongside the live ones.`,
+    );
   }
 
   // Webhooks are discovered HERE, with the callbacks, not after they have been

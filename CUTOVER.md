@@ -101,6 +101,34 @@ verification working from verification broken. The webhook assertions are the
 ones with teeth. Run it with `FLUID_WEBHOOK_AUTH_TOKEN` set — without it, only
 the refusal half is checked.
 
+**1b. Make the `callbacks` table describe all four definitions.** Do this
+BEFORE the first repoint, not after.
+
+`cutover repoint` plans from that table and then **refuses to move anything**
+if the company holds a live registration the plan does not cover. That check
+exists because the two sets genuinely diverge here: `DropletInstalledJob`
+registered `update_cart_shipping` *unconditionally*, independently of the
+table, so a company can hold a live shipping registration while its table row
+is inactive or missing. Without the check, `repoint` would move the three cart
+callbacks, print `Done`, and leave shipping — the one that matters — answering
+from Rails.
+
+So on the admin **Callbacks** screen, each of the four definitions needs a row
+that is active and has a url and a timeout. `pnpm cutover status <shop>` prints
+the rows next to the live registrations. Leave the urls on the Rails paths for
+now; the destination comes from `CALLBACK_PATHS` in `scripts/cutover.ts`, not
+from the row. Changing the urls is step 4.
+
+Activating the `update_cart_shipping` row makes Rails' install path try to
+register that definition twice — once hardcoded, once from the table. Fluid
+allows one registration per definition per owner, so the second attempt is
+rejected and `DropletInstalledJob` logs it. Harmless, and it stops once installs
+are handled by Next, which registers only from the table.
+
+If for some reason a row cannot be activated, repoint that one definition by
+hand with `--callback-path` instead. Do not work around the check by narrowing
+what it can see.
+
 **2. One internal installation.** Repoint it, watch it, put it back if needed.
 
 ```bash
@@ -138,8 +166,8 @@ tool stops and prints them rather than guessing: the listing is company-scoped,
 so another droplet installed for the same company can hold a registration with
 the same `definition_name`, and repointing theirs at us is an outage for them.
 
-All four definitions are planned before any of them is moved, and the run stops
-on the first failure. A company answering `update_cart_shipping` from Next while
+All four definitions are planned, and checked against the company's live
+registrations, before any of them is moved; the run stops on the first failure. A company answering `update_cart_shipping` from Next while
 `cart_customer_logged_in` still writes its session on Rails is not a state to
 discover halfway.
 
@@ -193,9 +221,10 @@ So, once every company has been repointed:
 1. In Fluid's droplet settings, set `fluid_webhook.url` to
    `https://fluid-droplet-shipping-options-next-...run.app/api/webhooks` and
    press **Update Droplet**. Confirm an install arrives.
-2. On the admin **Callbacks** screen, change all four rows to the Next paths in
-   the table at the top of this document. `pnpm cutover status <shop>` prints
-   every active row and flags each one still on a Rails path as `ON RAILS`.
+2. On the admin **Callbacks** screen, change all four rows — created in step 1b
+   — to the Next paths in the table at the top of this document.
+   `pnpm cutover status <shop>` prints every active row and flags each one still
+   on a Rails path as `ON RAILS`.
 
 Both are global, not per-tenant, and there is no partial version of either.
 
@@ -204,9 +233,10 @@ There is one difference worth knowing here. The Rails install path **hardcoded**
 `callbacks` row existed, and then registered every active row on top. The Next
 install path registers **only** what is in the `callbacks` table. So a new
 installation under Next gets exactly the rows an operator has marked active —
-which is the point, but it means step 4.2 is not cosmetic. If the
-`update_cart_shipping` row is missing or inactive when the first post-cutover
-install arrives, that company gets no shipping callback at all.
+which is the point, but it means step 1b and step 4.2 are not cosmetic. If the
+`update_cart_shipping` row is missing, inactive, or still on the Rails path when
+the first post-cutover install arrives, that company gets no working shipping
+callback at all.
 
 **5. Rails STAYS.** This is where this droplet differs from the others in the
 fleet, and it is not a detail to discover later.

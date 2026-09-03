@@ -72,6 +72,33 @@ describe("totalWeightLbs", () => {
     ).toBe(2);
   });
 
+  it("rounds the way Ruby rounds, not the way Math.round does", () => {
+    // Every value here is one where `Math.round(x * 100) / 100` disagrees with
+    // Ruby's `Float#round(2)`. The expectations are real `ruby -e` output, not
+    // derived from the implementation:
+    //
+    //   1.005.round(2) # => 1.01     Math.round(1.005 * 100) / 100 === 1
+    //   0.145.round(2) # => 0.15     Math.round(0.145 * 100) / 100 === 0.14
+    //   1.015.round(2) # => 1.02     Math.round(1.015 * 100) / 100 === 1.01
+    //
+    // A single 1.005 lb item lands on 1.00 under the naive version and 1.01
+    // under Rails, which with contiguous 0–1.00 and 1.01–10 bands is a
+    // different price for the same cart in the two apps.
+    const one = (weight: number) =>
+      totalWeightLbs([
+        { id: 1, quantity: 1, variant: { weight, unit_of_weight: "lb" } },
+      ]);
+
+    expect(one(1.005)).toBe(1.01);
+    expect(one(0.145)).toBe(0.15);
+    expect(one(1.015)).toBe(1.02);
+
+    // ...and the cases where the two agree still agree.
+    expect(one(2.675)).toBe(2.68);
+    expect(one(4.405)).toBe(4.41);
+    expect(one(8.835)).toBe(8.84);
+  });
+
   it("is 0 for an empty or missing cart", () => {
     expect(totalWeightLbs([])).toBe(0);
     expect(totalWeightLbs(null)).toBe(0);

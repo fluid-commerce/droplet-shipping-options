@@ -151,9 +151,66 @@ describe("calculateShipping", () => {
       {
         shipping_total: 0,
         shipping_title: "Coordinate with the shop",
-        shipping_delivery_time_estimate: 0,
+        shipping_delivery_time_estimate: "0",
       },
     ]);
+  });
+
+  it("treats a whitespace-only region as country-level, as Rails did", async () => {
+    // `rates.region` has no NOT-BLANK constraint and no model validation, and
+    // Rails asked `state_code.blank?` — so " " is a country-level rate there.
+    // Under a plain truthiness test it would be neither country-level nor a
+    // match for any state, and the option would lose its only rate.
+    mockPrisma.shippingOption.findMany.mockResolvedValue([
+      shippingOptionFixture({}, [
+        rateFixture({ region: "  ", flatRate: decimal(7) }),
+      ]),
+    ]);
+
+    const result = await calculateShipping({ ...base, company: company() });
+
+    expect(result.shipping_options).toHaveLength(1);
+    expect(result.shipping_options[0].shipping_total).toBe(7);
+  });
+
+  it("settles two overlapping bands by rate id rather than by query plan", async () => {
+    // The Rails overlap validation permits adjacent bands, and both ends are
+    // inclusive, so a 5 lb cart matches BOTH of these. Nothing ordered the
+    // rates in either app; this pins the tie-break.
+    mockPrisma.shippingOption.findMany.mockResolvedValue([
+      shippingOptionFixture({}, [
+        rateFixture({
+          id: 100n,
+          minRangeLbs: decimal(0),
+          maxRangeLbs: decimal(5),
+          flatRate: decimal(4),
+        }),
+        rateFixture({
+          id: 101n,
+          minRangeLbs: decimal(5),
+          maxRangeLbs: decimal(10),
+          flatRate: decimal(9),
+        }),
+      ]),
+    ]);
+
+    const result = await calculateShipping({
+      ...base,
+      company: company(),
+      items: [
+        { id: 1, quantity: 5, variant: { id: 2, weight: 1, unit_of_weight: "lb" } },
+      ],
+    });
+
+    expect(result.shipping_options[0].shipping_total).toBe(4);
+    // ...and the query asked for that order rather than relying on the plan.
+    expect(mockPrisma.shippingOption.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: {
+          rates: { where: { country: "US" }, orderBy: { id: "asc" } },
+        },
+      }),
+    );
   });
 
   it("orders options by this country's sort position, then by id", async () => {

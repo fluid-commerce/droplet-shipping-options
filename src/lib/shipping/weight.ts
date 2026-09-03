@@ -41,7 +41,43 @@ export function convertToPounds(weight: number, unit?: string | null): number {
   }
 }
 
-/** Total cart weight in pounds, rounded to 2dp as Rails rounded it. */
+/**
+ * Ruby's `Float#round(2)`, not JavaScript's.
+ *
+ * `Math.round(x * 100) / 100` is NOT the same function. Ruby's `flo_round`
+ * applies a correction after scaling — `round_half_up` in numeric.c — that
+ * recovers the half-way case the binary representation lost, and JavaScript has
+ * no equivalent:
+ *
+ *     1.005.round(2)  # => 1.01     Math.round(1.005 * 100) / 100  === 1
+ *     0.145.round(2)  # => 0.15     Math.round(0.145 * 100) / 100  === 0.14
+ *     1.015.round(2)  # => 1.02     Math.round(1.015 * 100) / 100  === 1.01
+ *
+ * That is not cosmetic here. The rounded weight is compared against contiguous
+ * rate bands, so a cart landing on one of these values is priced from the band
+ * below in one app and the band above in the other — the two apps quoting
+ * different shipping for the same cart, which is the one thing a per-company
+ * cutover must not produce.
+ *
+ * This is a direct port of numeric.c's `round_half_up`, cross-checked against
+ * real Ruby output in weight.test.ts.
+ */
+function roundHalfUpAsRuby(x: number, scale: number): number {
+  const scaled = x * scale;
+  // C's `round()` goes half AWAY FROM ZERO; JS's `Math.round` goes half toward
+  // +Infinity, so they disagree on every negative half.
+  let f = scaled < 0 ? -Math.round(-scaled) : Math.round(scaled);
+
+  if (x > 0) {
+    if ((f + 0.5) / scale <= x) f += 1;
+  } else if (x < 0) {
+    if ((f - 0.5) / scale >= x) f -= 1;
+  }
+
+  return f / scale;
+}
+
+/** Total cart weight in pounds, rounded to 2dp exactly as Rails rounded it. */
 export function totalWeightLbs(items: CartItem[] | null | undefined): number {
   if (!items || items.length === 0) return 0;
 
@@ -63,5 +99,5 @@ export function totalWeightLbs(items: CartItem[] | null | undefined): number {
     total += convertToPounds(weight, variant.unit_of_weight) * quantity;
   }
 
-  return Math.round(total * 100) / 100;
+  return roundHalfUpAsRuby(total, 100);
 }
