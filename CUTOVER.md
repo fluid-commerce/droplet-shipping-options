@@ -125,9 +125,12 @@ allows one registration per definition per owner, so the second attempt is
 rejected and `DropletInstalledJob` logs it. Harmless, and it stops once installs
 are handled by Next, which registers only from the table.
 
-If for some reason a row cannot be activated, repoint that one definition by
-hand with `--callback-path` instead. Do not work around the check by narrowing
-what it can see.
+There is no escape hatch, and `--callback-path` is not one: the plan is built
+from the table either way, so an inactive definition is still unplanned and the
+check still fires. If a live registration genuinely should not exist — a
+leftover from a definition this droplet no longer serves — delete it in Fluid
+and re-run. Do not narrow the check to get past it; every state it reports is a
+company that would otherwise end up answering from both apps.
 
 **2. One internal installation.** Repoint it, watch it, put it back if needed.
 
