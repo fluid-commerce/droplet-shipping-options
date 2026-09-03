@@ -69,6 +69,36 @@ export async function handleDropletInstalled(payload: unknown): Promise<void> {
     where: { fluidShop: data.fluid_shop },
   });
 
+  // Reinstall history, kept for the RAILS merchant UI.
+  //
+  // A reinstall issues a new `droplet_installation_uuid`, and every iframe url
+  // an operator already has in a tab still carries the old one. Rails'
+  // DriAuthentication concern looks the old value up in `previous_dris` so it
+  // can say "this was reinstalled, reopen it from Fluid" instead of "this
+  // installation does not exist" — and those screens (shipping options, the
+  // rate editor, subscriber settings) are NOT ported, so Rails serves them
+  // after this handler takes over the install webhook. Dropping the history
+  // here would break a Rails screen from the Next app.
+  //
+  // Capped at 5, most recent first, matching DropletInstalledJob.
+  const previousDris = (() => {
+    const current = existing?.dropletInstallationUuid;
+    const incoming = data.droplet_installation_uuid ?? null;
+    const history = Array.isArray(existing?.previousDris)
+      ? (existing.previousDris as unknown[]).filter(
+          (value): value is string => typeof value === "string",
+        )
+      : [];
+
+    if (!current || current === incoming) return history;
+    if (history.includes(current)) return history;
+
+    console.log(
+      `[DropletInstalled] Reinstall of ${data.fluid_shop}: ${current} -> ${incoming}`,
+    );
+    return [current, ...history].slice(0, 5);
+  })();
+
   const attributes = {
     fluidShop: data.fluid_shop,
     name: data.name,
@@ -82,6 +112,7 @@ export async function handleDropletInstalled(payload: unknown): Promise<void> {
     // makes the row live again; leaving it set would keep the company excluded
     // from every `uninstalledAt: null` lookup, including tenant resolution.
     uninstalledAt: null,
+    previousDris,
   };
 
   const company = existing

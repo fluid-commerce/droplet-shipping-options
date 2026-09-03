@@ -208,8 +208,44 @@ which is the point, but it means step 4.2 is not cosmetic. If the
 `update_cart_shipping` row is missing or inactive when the first post-cutover
 install arrives, that company gets no shipping callback at all.
 
-**5. Retire Rails.** Min-instances to 0 first and leave it a while — that is
-reversible in seconds. Delete only once nothing has needed it.
+**5. Rails STAYS.** This is where this droplet differs from the others in the
+fleet, and it is not a detail to discover later.
+
+**The merchant-facing UI is not ported.** Everything a shop operator opens from
+inside Fluid is still Rails only:
+
+| Rails route | What it is |
+|---|---|
+| `GET /` | the droplet's embed page (`droplet.embed_url`) |
+| `/shipping_options` (+ `shipping_methods`, `sort_order`, `disable`) | create and order the shipping methods |
+| `/rate_tables` (+ `import`, `process_import`, `editor`) | the rate tables and the CSV importer |
+| `/api/rates`, `/api/rates/bulk_update` | the React rate editor's backend |
+| `/api/geography/countries`, `/api/geography/states` | the country/state pickers |
+| `/subscriber_setting` | the free-shipping-for-subscribers toggle |
+
+All six authenticate with `DriAuthentication` — the `dri` query parameter Fluid
+puts on the iframe url — and none has a Next equivalent. The Next app's `/admin`
+is the *internal* dashboard (users, settings, the callbacks catalogue), not the
+merchant one.
+
+So after step 4 the two apps split cleanly by role: **Next answers Fluid**
+(callbacks and webhooks), **Rails answers the operator** (the iframe). Both read
+the same tables, and the only shared write path is `companies`, which only the
+install/uninstall handlers touch.
+
+Two things follow.
+
+- **Do not scale the Rails service to zero, and do not delete it.** Its
+  min-instances stays where it is. `droplet.embed_url` keeps pointing at the
+  Rails host.
+- **`previous_dris` has to keep being maintained by whichever app handles
+  installs.** Rails' `DriAuthentication` reads it to tell "you reinstalled,
+  reopen the droplet" apart from "this installation does not exist", and after
+  step 4 the install webhook is handled by Next. `handleDropletInstalled` writes
+  it for exactly that reason; `src/lib/handlers/handlers.test.ts` pins it.
+
+Retiring Rails is a separate piece of work: port those six routes and the React
+rate editor, then move `droplet.embed_url`. Nothing in this document covers it.
 
 ## Rules while both apps are live
 
@@ -231,6 +267,12 @@ subscription lookup it fed has been replaced by `MetafieldSubscriptionService`,
 which calls Fluid with the company's own `authentication_token`. If an Exigo-style
 credential is ever added back, it must not go in a Rails-encrypted column while
 both apps are live.
+
+**Both apps write `companies`, and only there.** The Next install and uninstall
+handlers write the same columns the Rails jobs wrote. Nothing else is written by
+both: `cart_sessions` is written only from the callbacks (so only by Next, once
+a company is over), and `shipping_options` / `rates` / `settings` are written
+only from the Rails merchant UI.
 
 **Cache invalidation is not shared.** Rails caches a company's shipping options
 for ten minutes (`ShippingOption#invalidate_cache!` clears it on write). The Next

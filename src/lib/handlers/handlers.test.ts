@@ -122,6 +122,59 @@ describe("handleDropletInstalled", () => {
     expect(mockPrisma.company.update).toHaveBeenCalled();
   });
 
+  describe("previous_dris", () => {
+    // Kept for the RAILS merchant UI, which is not ported: its
+    // DriAuthentication concern looks an old installation uuid up here so an
+    // already-open iframe says "reinstalled, reopen it" rather than "this
+    // installation does not exist".
+    it("records the superseded installation uuid, most recent first", async () => {
+      mockPrisma.company.findFirst.mockResolvedValue(
+        companyFixture({
+          dropletInstallationUuid: "dri_old",
+          previousDris: ["dri_older"],
+        }),
+      );
+
+      await handleDropletInstalled(installPayload);
+
+      const update = mockPrisma.company.update.mock.calls[0][0];
+      expect(update.data.previousDris).toEqual(["dri_old", "dri_older"]);
+      expect(update.data.dropletInstallationUuid).toBe("dri_acme");
+    });
+
+    it("does not record anything when the installation uuid is unchanged", async () => {
+      mockPrisma.company.findFirst.mockResolvedValue(
+        companyFixture({
+          dropletInstallationUuid: "dri_acme",
+          previousDris: ["dri_older"],
+        }),
+      );
+
+      await handleDropletInstalled(installPayload);
+
+      // A redelivered droplet.installed for a working installation must not
+      // push its own live uuid into the history.
+      expect(
+        mockPrisma.company.update.mock.calls[0][0].data.previousDris,
+      ).toEqual(["dri_older"]);
+    });
+
+    it("keeps only the five most recent", async () => {
+      mockPrisma.company.findFirst.mockResolvedValue(
+        companyFixture({
+          dropletInstallationUuid: "dri_old",
+          previousDris: ["d1", "d2", "d3", "d4", "d5"],
+        }),
+      );
+
+      await handleDropletInstalled(installPayload);
+
+      expect(
+        mockPrisma.company.update.mock.calls[0][0].data.previousDris,
+      ).toEqual(["dri_old", "d1", "d2", "d3", "d4"]);
+    });
+  });
+
   it("clears uninstalled_at, so a reinstall is live again", async () => {
     mockPrisma.company.findFirst.mockResolvedValue(
       companyFixture({ uninstalledAt: new Date(), active: false }),

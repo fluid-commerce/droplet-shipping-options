@@ -5,8 +5,13 @@
 > A **Next.js** app is being migrated in alongside the existing **Rails 8** app.
 > Both run against the same PostgreSQL database. The Rails app is still the one
 > deployed and the one every installation points at; the Next app takes no
-> traffic until an installation's registrations are repointed at it. Removing
-> Rails is a deliberate follow-up PR, not part of the migration PR.
+> traffic until an installation's registrations are repointed at it.
+>
+> **Only the Fluid-facing half is ported.** The Next app answers the four
+> callbacks and the webhook. The merchant UI an operator opens from inside Fluid
+> — shipping methods, the rate tables and their CSV importer, the React rate
+> editor, the subscriber toggle — is still Rails only, so **Rails is not being
+> retired by this work**. See [`CUTOVER.md`](CUTOVER.md) step 5.
 >
 > See [Next.js app](#nextjs-app) below and [`CUTOVER.md`](CUTOVER.md).
 
