@@ -111,7 +111,11 @@ export interface ShippingCalculationResult {
  * whatever shipping the cart already had — it does not offer free shipping. A
  * single zero-priced entry would be applied as a real zero.
  */
-export const NEUTRAL_RESULT: ShippingCalculationResult = {
-  success: true,
-  shipping_options: [],
-};
+export const NEUTRAL_RESULT: Readonly<ShippingCalculationResult> =
+  Object.freeze({
+    success: true,
+    // Frozen too. Both are module-level singletons handed straight to
+    // `NextResponse.json`, and a later edit that pushed an option onto this
+    // array would leak it into every subsequent refusal on that instance.
+    shipping_options: Object.freeze([]) as readonly ShippingOptionResult[],
+  }) as Readonly<ShippingCalculationResult>;
