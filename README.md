@@ -46,7 +46,6 @@ plus callback signature verification via `@fluid-app/droplet-sdk`.
 | `prisma/schema.prisma` | The **existing Rails tables**, mapped with `@@map`/`@map` |
 | `db/migrate/` | Rails owns the schema, including `fluid_callback_registrations` — the Next app runs no migration step |
 | `scripts/` | `cutover.ts`, `smoke-next.sh`, `backfill-callback-tokens.ts`, `create-admin.ts`, `create-default-settings.ts` |
-| `vendor/droplet-sdk/` | Temporary vendored copy of the SDK — see below |
 | `Dockerfile.next` | Production image (the Rails `docker/Dockerfile` still builds the Rails service) |
 | `.github/workflows/ci-next.yml` | Lint / typecheck / test / build / docker |
 
@@ -87,18 +86,18 @@ app took over the root `package.json`; `ci.yml`, `docker/Dockerfile*`, `makefile
 `Procfile.dev` and `bin/setup` were updated to match, and nothing under `app/`,
 `config/`, `db/` (other than the one additive migration) or `Gemfile` changed.
 
-### The SDK is vendored, temporarily
+### The SDK comes from the registry
 
-`@fluid-app/droplet-sdk` is **not published yet**, so the SDK source is vendored
-at `vendor/droplet-sdk` and depended on as
-`"@fluid-app/droplet-sdk": "link:./vendor/droplet-sdk"`. `pnpm install`,
-`pnpm build` and `pnpm test` therefore work on a clean clone with no registry
-authentication.
+`@fluid-app/droplet-sdk` is a normal dependency, pinned to an exact version:
+`"@fluid-app/droplet-sdk": "0.2.4"`. It is public on npmjs, so `pnpm install`,
+`pnpm build` and `pnpm test` work on a clean clone with no registry
+authentication — that is why the `@fluid-app` scope was chosen over GitHub
+Packages, which demands a token even for public packages.
 
-Import specifiers are already the published name, so switching to the registry
-copy is one line in `package.json` and nothing else. The directory is a
-**verbatim copy** — refresh it by replacing it wholesale from the droplet
-template, never by editing it in place, or the fleet's copies diverge.
+The pin is exact on purpose. A range would let two droplets deployed on
+different days run different verifier code with nothing recording which, and
+vendored copies quietly diverging is what produced the cross-tenant lifecycle
+hole (STU2-3366). Upgrading is a visible change to this file.
 
 ## Production environment
 
