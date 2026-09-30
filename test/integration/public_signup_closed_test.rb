@@ -85,6 +85,35 @@ class PublicSignupClosedTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_user_session_path
   end
 
+  test "a signed-in admin can still create a staff user, who can then sign in" do
+    sign_in users(:admin)
+
+    assert_difference -> { User.count }, 1 do
+      post admin_users_path, params: {
+        user: {
+          email: "new-staff@example.com",
+          password: "password123",
+          password_confirmation: "password123",
+          # The form's multi-select always submits a hidden "" alongside choices.
+          permission_sets: [ "", "AdminPermissions" ],
+        },
+      }
+    end
+    assert_redirected_to admin_users_path
+
+    sign_out :user
+    post user_session_path, params: { user: { email: "new-staff@example.com", password: "password123" } }
+    assert_redirected_to admin_dashboard_path
+  end
+
+  test "a signed-out visitor cannot create a user through the admin console" do
+    assert_no_difference -> { User.count } do
+      post admin_users_path, params: SIGNUP_PARAMS
+    end
+
+    assert_redirected_to new_user_session_path
+  end
+
   test "a wrong password is still rejected" do
     User.create!(email: "staff@example.com", password: "password123", password_confirmation: "password123")
 
