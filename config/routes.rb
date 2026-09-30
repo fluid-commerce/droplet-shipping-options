@@ -3,7 +3,10 @@ Rails.application.routes.draw do
 
   get "up" => "rails/health#show", as: :rails_health_check
 
-  devise_for :users
+  # No registration routes: sign-up is closed (see User). skip: :registrations
+  # is belt-and-braces with the model, so re-adding :registerable alone cannot
+  # quietly reopen /users/sign_up.
+  devise_for :users, skip: :registrations
 
   post "webhook", to: "webhooks#create", as: :webhook
 

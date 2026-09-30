@@ -1,7 +1,12 @@
 class User < ApplicationRecord
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
-  devise :database_authenticatable, :registerable,
+  #
+  # :registerable is deliberately absent. This is an internal admin console and
+  # AdminController admits any signed-in user, so public sign-up at
+  # /users/sign_up handed full admin to anyone. Staff accounts are created by
+  # an existing admin under /admin/users.
+  devise :database_authenticatable,
          :recoverable, :rememberable, :validatable
 
   def has_permission_set?(set_name)
