@@ -22,8 +22,8 @@
 # agrees with. cloudbuild-production.yml keeps the `${_APP_NAME}-migrations`
 # job — that stays the Rails pipeline's business, not this one's.
 #
-# The Rails config also updates a `${_APP_NAME}-jobs-console` GCE container.
-# That is Solid Queue's console host; the Next app runs its webhook handlers
+# The Rails config also updates the `${_APP_NAME}-jobs` Cloud Run worker pool.
+# That runs Solid Queue; the Next app runs its webhook handlers
 # inline and has no worker, so there is nothing here to update. Nor is there a
 # `${_APP_NAME}-migrations` step: see above.
 steps:

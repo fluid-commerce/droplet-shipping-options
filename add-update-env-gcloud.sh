@@ -2,7 +2,7 @@
 
 SERVICE=fluid-droplet-shipping-options
 SERVICE_JOBS_MIGRATIONS=fluid-droplet-shipping-options-migrations
-SERVICE_RAILS_JOBS_CONSOLE=fluid-droplet-shipping-options-jobs-console
+SERVICE_JOBS_WORKER_POOL=fluid-droplet-shipping-options-jobs
 IMAGE_URL=europe-west1-docker.pkg.dev/fluid-417204/fluid-droplets/fluid-droplet-shipping-options-rails/web:latest
 
 # Variables array - add your variables here
@@ -19,12 +19,6 @@ for var in "${VARS[@]}"; do
   CLOUD_RUN_ENV_ARGS="$CLOUD_RUN_ENV_ARGS --update-env-vars $var"
 done
 
-# Build the environment variables arguments for Compute Engine
-COMPUTE_ENV_ARGS=""
-for var in "${VARS[@]}"; do
-  COMPUTE_ENV_ARGS="$COMPUTE_ENV_ARGS --container-env=$var"
-done
-
 # Update the environment variables for the service cloud run web Cloud Run migrations
 gcloud run jobs update $SERVICE_JOBS_MIGRATIONS --region=us-south1 --project=fluid-prod-0 --image $IMAGE_URL $CLOUD_RUN_ENV_ARGS
 
@@ -32,6 +26,6 @@ gcloud run jobs update $SERVICE_JOBS_MIGRATIONS --region=us-south1 --project=flu
 echo "Updating Cloud Run service: $SERVICE"
 gcloud run services update $SERVICE --region=us-south1 --project=fluid-prod-0 --image $IMAGE_URL $CLOUD_RUN_ENV_ARGS
 
-# Update the environment variables for the service rails jobs console Compute Engine
-echo "Updating Compute Engine instance: $SERVICE_RAILS_JOBS_CONSOLE"
-gcloud compute instances update-container $SERVICE_RAILS_JOBS_CONSOLE --zone=europe-west1-b $COMPUTE_ENV_ARGS
+# Update the environment variables for the Solid Queue worker pool
+echo "Updating Cloud Run worker pool: $SERVICE_JOBS_WORKER_POOL"
+gcloud beta run worker-pools update $SERVICE_JOBS_WORKER_POOL --region=us-south1 --project=fluid-prod-0 --image $IMAGE_URL $CLOUD_RUN_ENV_ARGS
