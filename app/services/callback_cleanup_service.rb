@@ -7,7 +7,8 @@ class CallbackCleanupService
   ].freeze
 
   def self.own_callback_urls
-    ([ENV.fetch("DROPLET_URL", DEFAULT_DROPLET_URLS.first)] + DEFAULT_DROPLET_URLS).uniq.map { |url| "#{url}#{CALLBACK_PATH}" }
+    urls = [ ENV.fetch("DROPLET_URL", DEFAULT_DROPLET_URLS.first) ] + DEFAULT_DROPLET_URLS
+    urls.uniq.map { |url| "#{url}#{CALLBACK_PATH}" }
   end
 
   def initialize(company)
