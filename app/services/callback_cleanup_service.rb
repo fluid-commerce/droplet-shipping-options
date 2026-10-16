@@ -1,4 +1,16 @@
 class CallbackCleanupService
+  CALLBACK_PATH = "/callbacks/shipping_options".freeze
+  DEFAULT_DROPLET_URLS = [
+    "https://fluid-droplet-shipping-options-295375388381.us-south1.run.app",
+    "https://fluid-droplet-shipping-options-106074092699.europe-west1.run.app",
+    "https://fluid-droplet-shipping-options-3h47nfle6q-ew.a.run.app",
+  ].freeze
+
+  def self.own_callback_urls
+    urls = [ ENV.fetch("DROPLET_URL", DEFAULT_DROPLET_URLS.first) ] + DEFAULT_DROPLET_URLS
+    urls.uniq.map { |url| "#{url}#{CALLBACK_PATH}" }
+  end
+
   def initialize(company)
     @company = company
   end
@@ -54,8 +66,7 @@ class CallbackCleanupService
       # Second, fetch and delete any orphaned callbacks for this definition
       # This handles cases where callbacks were created but not tracked
       begin
-        droplet_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-106074092699.europe-west1.run.app")
-        expected_callback_url = "#{droplet_url}/callbacks/shipping_options"
+        expected_callback_urls = self.class.own_callback_urls
 
         # Fetch all callback registrations for this definition
         list_response = HTTParty.get(
@@ -76,10 +87,10 @@ class CallbackCleanupService
 
             # IMPORTANT: Only delete callbacks that point to OUR app's URL
             # This prevents accidentally deleting callbacks from other apps
-            unless callback_url == expected_callback_url
+            unless expected_callback_urls.include?(callback_url)
               Rails.logger.info(
                 "[CallbackCleanupService] Skipping callback #{callback_uuid} - " \
-                "URL mismatch (ours: #{expected_callback_url}, theirs: #{callback_url})"
+                "URL mismatch (ours: #{expected_callback_urls.join(", ")}, theirs: #{callback_url})"
               )
               next
             end

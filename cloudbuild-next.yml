@@ -22,8 +22,8 @@
 # agrees with. cloudbuild-production.yml keeps the `${_APP_NAME}-migrations`
 # job — that stays the Rails pipeline's business, not this one's.
 #
-# The Rails config also updates a `${_APP_NAME}-jobs-console` GCE container.
-# That is Solid Queue's console host; the Next app runs its webhook handlers
+# The Rails config also updates the `${_APP_NAME}-jobs` Cloud Run worker pool.
+# That runs Solid Queue; the Next app runs its webhook handlers
 # inline and has no worker, so there is nothing here to update. Nor is there a
 # `${_APP_NAME}-migrations` step: see above.
 steps:
@@ -78,7 +78,13 @@ steps:
         "${_APP_NAME}-next",
         "--platform=managed",
         "--image=europe-west1-docker.pkg.dev/${PROJECT_ID}/${_APP_REPOSITORY}/${_APP_NAME}-next/web:$COMMIT_SHA",
-        "--region=europe-west1",
+        "--project=fluid-prod-0",
+        "--region=us-south1",
+        "--network=fluid-prod-network-vpc",
+        "--subnet=fluid-prod-network-cloudrun-us-south1",
+        "--vpc-egress=private-ranges-only",
+        "--service-account=fluid-prod-droplets@fluid-prod-0.iam.gserviceaccount.com",
+        "--clear-cloudsql-instances",
         "--revision-suffix=${COMMIT_SHA}-${_TIMESTAMP}",
       ]
     id: deploy next

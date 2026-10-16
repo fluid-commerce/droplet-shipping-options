@@ -41,7 +41,13 @@ steps:
         "update",
         "${_APP_NAME}-migrations",
         "--image=europe-west1-docker.pkg.dev/${PROJECT_ID}/${_APP_REPOSITORY}/${_APP_NAME}-rails/web:$COMMIT_SHA",
-        "--region=europe-west1",
+        "--project=fluid-prod-0",
+        "--region=us-south1",
+        "--network=fluid-prod-network-vpc",
+        "--subnet=fluid-prod-network-cloudrun-us-south1",
+        "--vpc-egress=private-ranges-only",
+        "--service-account=fluid-prod-droplets@fluid-prod-0.iam.gserviceaccount.com",
+        "--clear-cloudsql-instances",
         "--execute-now",
         "--wait",
       ]
@@ -57,7 +63,13 @@ steps:
         "${_APP_NAME}",
         "--platform=managed",
         "--image=europe-west1-docker.pkg.dev/${PROJECT_ID}/${_APP_REPOSITORY}/${_APP_NAME}-rails/web:$COMMIT_SHA",
-        "--region=europe-west1",
+        "--project=fluid-prod-0",
+        "--region=us-south1",
+        "--network=fluid-prod-network-vpc",
+        "--subnet=fluid-prod-network-cloudrun-us-south1",
+        "--vpc-egress=private-ranges-only",
+        "--service-account=fluid-prod-droplets@fluid-prod-0.iam.gserviceaccount.com",
+        "--clear-cloudsql-instances",
         "--revision-suffix=${COMMIT_SHA}-${_TIMESTAMP}",
       ]
     id: deploy-production
@@ -67,12 +79,14 @@ steps:
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     args:
       [
-        "compute",
-        "instances",
-        "update-container",
-        "${_APP_NAME}-jobs-console",
-        "--zone=europe-west1-b",
-        "--container-image=europe-west1-docker.pkg.dev/${PROJECT_ID}/${_APP_REPOSITORY}/${_APP_NAME}-rails/web:$COMMIT_SHA",
+        "beta",
+        "run",
+        "worker-pools",
+        "update",
+        "${_APP_NAME}-jobs",
+        "--image=europe-west1-docker.pkg.dev/${PROJECT_ID}/${_APP_REPOSITORY}/${_APP_NAME}-rails/web:$COMMIT_SHA",
+        "--project=fluid-prod-0",
+        "--region=us-south1",
         "--quiet",
       ]
     id: update-container-jobs-production

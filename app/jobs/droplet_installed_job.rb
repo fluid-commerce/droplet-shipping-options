@@ -74,7 +74,7 @@ private
     CallbackCleanupService.new(company).call
 
     # Always register the shipping options callback - required for droplet functionality
-    droplet_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-106074092699.europe-west1.run.app")
+    droplet_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-295375388381.us-south1.run.app")
     api_base_url = Setting.fluid_api.base_url
     required_callback = {
       definition_name: "update_cart_shipping",
