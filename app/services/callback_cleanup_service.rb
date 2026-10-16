@@ -54,7 +54,7 @@ class CallbackCleanupService
       # Second, fetch and delete any orphaned callbacks for this definition
       # This handles cases where callbacks were created but not tracked
       begin
-        droplet_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-106074092699.europe-west1.run.app")
+        droplet_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-295375388381.us-south1.run.app")
         expected_callback_url = "#{droplet_url}/callbacks/shipping_options"
 
         # Fetch all callback registrations for this definition

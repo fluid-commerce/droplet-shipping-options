@@ -78,7 +78,7 @@ private
     client = FluidClient.new
 
     # Always register the shipping callback - required for droplet functionality
-    base_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-106074092699.europe-west1.run.app")
+    base_url = ENV.fetch("DROPLET_URL", "https://fluid-droplet-shipping-options-295375388381.us-south1.run.app")
     callback = {
       definition_name: "update_cart_shipping",
       url: "#{base_url}/callbacks/shipping_options",
