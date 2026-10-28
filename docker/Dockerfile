@@ -1,5 +1,5 @@
 ARG RUBY_VERSION=3.4.2
-FROM europe-west1-docker.pkg.dev/fluid-417204/fluid-droplets/fluid-droplet-shipping-options-base/web:latest AS base
+FROM us-south1-docker.pkg.dev/fluid-417204/fluid-droplets/fluid-droplet-shipping-options-base/web:latest AS base
 
 # Rails app lives here
 WORKDIR /rails

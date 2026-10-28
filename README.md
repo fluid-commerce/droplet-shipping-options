@@ -121,7 +121,7 @@ jobs console: Google Cloud Compute Engine name `fluid-droplet-droplet-shipping-o
 Run github action to deploy to google cloud `deploy production`
 or run the following command to deploy to google cloud  
 
-`gcloud beta builds submit --config cloudbuild-production.yml --region=europe-west1 --substitutions=COMMIT_SHA=$(git rev-parse --short HEAD),_TIMESTAMP=$(date +%Y%m%d%H%M%S) --project=fluid-417204 .`
+`gcloud beta builds submit --config cloudbuild-production.yml --region=us-south1 --substitutions=COMMIT_SHA=$(git rev-parse --short HEAD),_TIMESTAMP=$(date +%Y%m%d%H%M%S) --project=fluid-417204 .`
 
 ### Add environment variables to google cloud
 
