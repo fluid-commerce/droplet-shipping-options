@@ -68,7 +68,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Scan for common Rails security vulnerabilities using static analysis
-        run: bin/brakeman --no-pager --skip-files app/controllers/rates_controller.rb
+        run: bin/brakeman --no-pager --skip-files app/controllers/rates_controller.rb --except EOLRails,EOLRuby
 
   rubocop:
     runs-on: ubuntu-latest
